@@ -72,4 +72,4 @@ npm run dev                  # http://localhost:3000
 ## Prochaines étapes
 - [x] CRM (ce dépôt)
 - [ ] Workflows n8n 1 → 6 (voir [`n8n/README.md`](n8n/README.md))
-- [ ] Formulaire + prise de RDV sur le site vitrine
+- [ ] Formulaire + prise de RDV sur le site vitrine → [`docs/SITE.md`](docs/SITE.md)
