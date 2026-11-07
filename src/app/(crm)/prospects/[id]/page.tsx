@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { addNote, createOffer, deleteOffer, deleteProspect, markOfferSent, setOptOut, updateProspect } from "@/app/actions";
 import { ConfirmButton, CopyButton, MarkRead, StatusSelect } from "@/components/client";
+import { RowMenu } from "@/components/RowMenu";
 import { ProspectFields } from "@/components/ProspectFields";
 import { ACTIVITY_LABELS, OFFER_STATUS } from "@/lib/constants";
 import { dateTime, euro, isMobileFR } from "@/lib/format";
@@ -143,9 +144,12 @@ export default async function ProspectPage({ params, searchParams }: { params: P
                   return (
                     <li key={a.id} className="relative">
                       <span className="absolute -left-[31px] grid size-6 place-items-center rounded-full border border-border bg-surface text-xs">{ACTIVITY_LABELS[a.type].emoji}</span>
-                      <div className="flex flex-wrap items-baseline gap-x-2 text-sm">
-                        <span className="font-medium">{ACTIVITY_LABELS[a.type].label}</span>
-                        <span className="text-xs text-muted">{dateTime(a.created_at)} · {a.created_by}</span>
+                      <div className="flex items-start gap-2">
+                        <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 text-sm">
+                          <span className="font-medium">{ACTIVITY_LABELS[a.type].label}</span>
+                          <span className="text-xs text-muted">{dateTime(a.created_at)} · {a.created_by}</span>
+                        </div>
+                        <div className="-mt-1"><RowMenu id={a.id} kind="activity" /></div>
                       </div>
                       {a.content && (
                         <div className={`mt-1 text-sm whitespace-pre-line ${inbound ? "rounded-lg bg-bg p-3" : "text-muted"}`}>{a.content}</div>

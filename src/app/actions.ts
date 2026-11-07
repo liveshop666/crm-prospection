@@ -122,3 +122,20 @@ export async function signOut() {
   await supabase.auth.signOut();
   redirect("/login");
 }
+
+/** Supprime une ligne du journal du site (page Site). */
+export async function deleteSiteEvent(id: string) {
+  const supabase = await db();
+  const { error } = await supabase.from("site_events").delete().eq("id", id);
+  if (error) throw error;
+  revalidatePath("/site");
+}
+
+/** Supprime une ligne d'historique (accueil « Activité récente » ou fiche prospect). */
+export async function deleteActivity(id: string) {
+  const supabase = await db();
+  const { data, error } = await supabase.from("activities").delete().eq("id", id).select("prospect_id").maybeSingle();
+  if (error) throw error;
+  revalidatePath("/");
+  if (data?.prospect_id) revalidatePath(`/prospects/${data.prospect_id}`);
+}

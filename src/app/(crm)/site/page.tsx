@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { RowMenu } from "@/components/RowMenu";
 import { Empty, PageHeader, Stat } from "@/components/ui";
 import { dateTime } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
@@ -117,7 +118,7 @@ export default async function SitePage({ searchParams }: { searchParams: Promise
         </details>
       </section>
 
-      <section className="card mt-6 overflow-hidden">
+      <section className="card mt-6">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
           <h2 className="text-sm font-semibold">Derniers passages</h2>
           <div className="flex flex-wrap gap-1 text-xs">
@@ -145,6 +146,7 @@ export default async function SitePage({ searchParams }: { searchParams: Promise
                     </div>
                   </div>
                   <span className="shrink-0 text-xs text-muted">{dateTime(e.created_at)}</span>
+                  <div className="-my-1"><RowMenu id={e.id} kind="site" /></div>
                 </li>
               );
             })}

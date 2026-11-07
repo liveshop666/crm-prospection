@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { RowMenu } from "@/components/RowMenu";
 import { Empty, PageHeader, ProspectLine, Stat } from "@/components/ui";
 import { ACTIVITY_LABELS } from "@/lib/constants";
 import { euro, timeAgo } from "@/lib/format";
@@ -43,13 +44,13 @@ export default async function Dashboard() {
           </div>
         </section>
 
-        <section className="card overflow-hidden lg:col-span-2">
+        <section className="card lg:col-span-2">
           <h2 className="border-b border-border px-4 py-3 text-sm font-semibold">⚡ Activité récente</h2>
           <ul className="divide-y divide-border">
             {(feed as (Activity & { prospects: { id: string; company_name: string } | null })[] | null)?.length ? (
               (feed as (Activity & { prospects: { id: string; company_name: string } | null })[]).map((a) => (
-                <li key={a.id}>
-                  <Link href={`/prospects/${a.prospect_id}`} className="flex items-start gap-3 px-4 py-3 hover:bg-bg">
+                <li key={a.id} className="flex items-start gap-1 pr-2 last:rounded-b-xl hover:bg-bg">
+                  <Link href={`/prospects/${a.prospect_id}`} className="flex min-w-0 flex-1 items-start gap-3 px-4 py-3">
                     <span>{ACTIVITY_LABELS[a.type].emoji}</span>
                     <div className="min-w-0 flex-1">
                       <div className="text-sm"><span className="font-medium">{a.prospects?.company_name}</span> <span className="text-muted">· {ACTIVITY_LABELS[a.type].label}</span></div>
@@ -57,6 +58,7 @@ export default async function Dashboard() {
                     </div>
                     <span className="shrink-0 text-xs text-muted">{timeAgo(a.created_at)}</span>
                   </Link>
+                  <div className="pt-2.5"><RowMenu id={a.id} kind="activity" /></div>
                 </li>
               ))
             ) : <Empty>Aucune activité pour l&apos;instant. Branche n8n pour que l&apos;agent commence.</Empty>}
