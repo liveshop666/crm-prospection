@@ -1,6 +1,8 @@
 # Workflows n8n
 
-L'agent est construit sur un autre compte n8n. Il a besoin de : l'adresse du CRM, la clé `CRM_API_KEY` (credential **Header Auth** `x-api-key`) et du contrat d'API ci-dessous.\n\n**Règle d'or :** chaque email doit contenir le lien perso du prospect (`tracking_url`, renvoyé à la création). C'est lui qui relie clics, demandes et RDV à la bonne fiche.
+L'agent est construit sur un autre compte n8n. Il a besoin de : l'adresse du CRM, la clé `CRM_API_KEY` (credential **Header Auth** `x-api-key`) et du contrat d'API ci-dessous.
+
+**Règle d'or :** chaque email doit contenir le lien perso du prospect (`tracking_url`, renvoyé à la création). C'est lui qui relie clics, demandes et RDV à la bonne fiche.
 
 | # | Workflow | Déclencheur | Rôle | État |
 |---|---|---|---|---|
