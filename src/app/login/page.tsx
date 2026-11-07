@@ -13,10 +13,27 @@ function LoginForm() {
     e.preventDefault();
     setLoading(true); setError("");
     const fd = new FormData(e.currentTarget);
-    const { error } = await createClient().auth.signInWithPassword({ email: String(fd.get("email")), password: String(fd.get("password")) });
-    setLoading(false);
-    if (error) return setError("Email ou mot de passe incorrect.");
-    router.replace("/"); router.refresh();
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      setLoading(false);
+      return setError("Configuration manquante : NEXT_PUBLIC_SUPABASE_URL ou NEXT_PUBLIC_SUPABASE_ANON_KEY n'est pas dans Vercel (ou ajoutée sans Redeploy).");
+    }
+    try {
+      const { error } = await createClient().auth.signInWithPassword({
+        email: String(fd.get("email")).trim(), password: String(fd.get("password")),
+      });
+      setLoading(false);
+      if (error) {
+        const m = error.message.toLowerCase();
+        if (m.includes("email not confirmed")) return setError("Email pas confirmé : dans Supabase > Authentication > Users, recrée l'utilisateur en cochant « Auto Confirm User ».");
+        if (m.includes("invalid login")) return setError("Email ou mot de passe incorrect (vérifie l'utilisateur dans Supabase > Authentication > Users).");
+        if (m.includes("api key") || m.includes("apikey")) return setError("Clé Supabase invalide : vérifie NEXT_PUBLIC_SUPABASE_ANON_KEY dans Vercel, puis Redeploy.");
+        return setError(`Erreur Supabase : ${error.message}`);
+      }
+      router.replace("/"); router.refresh();
+    } catch (err) {
+      setLoading(false);
+      setError(`Impossible de joindre Supabase : vérifie NEXT_PUBLIC_SUPABASE_URL dans Vercel (${err instanceof Error ? err.message : String(err)}).`);
+    }
   }
 
   return (
