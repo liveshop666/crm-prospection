@@ -152,7 +152,7 @@ export default async function ProspectPage({ params, searchParams }: { params: P
                         <div className="-mt-1"><RowMenu id={a.id} kind="activity" /></div>
                       </div>
                       {a.content && (
-                        <div className={`mt-1 text-sm whitespace-pre-line ${inbound ? "rounded-lg bg-white/5 p-3" : "text-muted"}`}>{a.content}</div>
+                        <div className={`mt-1 text-sm whitespace-pre-line ${inbound ? "rounded-lg bg-soft p-3" : "text-muted"}`}>{a.content}</div>
                       )}
                       {typeof a.metadata?.subject === "string" && <div className="mt-1 text-xs text-muted">Objet : {a.metadata.subject}</div>}
                     </li>

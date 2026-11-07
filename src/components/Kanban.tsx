@@ -38,7 +38,7 @@ export function Kanban({ prospects }: { prospects: Prospect[] }) {
                     <span className="truncate">{p.company_name}</span>
                   </div>
                   <div className="mt-0.5 truncate text-xs text-muted">{[p.sector, p.city].filter(Boolean).join(" · ") || "—"}</div>
-                  {p.interest && <div className="mt-2 inline-block rounded bg-white/5 px-1.5 py-0.5 text-[11px]">{p.interest}</div>}
+                  {p.interest && <div className="mt-2 inline-block rounded bg-soft px-1.5 py-0.5 text-[11px]">{p.interest}</div>}
                   <div className="mt-2 text-[11px] text-muted">{timeAgo(p.updated_at)}{p.link_clicks > 0 && ` · 👀 ${p.link_clicks}`}</div>
                 </Link>
               ))}

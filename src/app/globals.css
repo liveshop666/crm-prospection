@@ -16,7 +16,32 @@
   --gold: #ffd93d;        /* jaune du logo */
   --chart-bar: #f2479a;   /* rose validé pour les barres sur fond sombre */
   --warm: linear-gradient(90deg, #ffb547, #ff4fa3 50%, #8b3dff);
+  --soft: rgba(255, 255, 255, .05);
+  --soft-2: rgba(255, 255, 255, .1);
+  --glow-1: rgba(255, 79, 163, .18);
+  --glow-2: rgba(34, 211, 238, .12);
+  --dots: rgba(255, 255, 255, .05);
   color-scheme: dark;
+}
+
+/* Mode clair (bouton « Clair » en haut de page) */
+html:not(.dark) {
+  --bg: #f7f5fa;
+  --surface: #ffffff;
+  --surface-2: #f3eff8;
+  --border: #e4dded;
+  --text: #17121f;
+  --muted: #645c72;
+  --accent: #d81b67;      /* rose du logo, lisible sur fond clair */
+  --accent-fg: #ffffff;
+  --chart-bar: #d81b67;
+  --warm: linear-gradient(90deg, #e8890c, #d81b67 50%, #7b2ff0);
+  --soft: rgba(23, 18, 31, .04);
+  --soft-2: rgba(23, 18, 31, .08);
+  --glow-1: rgba(216, 27, 103, .08);
+  --glow-2: rgba(34, 211, 238, .08);
+  --dots: rgba(23, 18, 31, .05);
+  color-scheme: light;
 }
 
 @theme inline {
@@ -31,6 +56,8 @@
   --color-cyan: var(--cyan);
   --color-gold: var(--gold);
   --color-chart-bar: var(--chart-bar);
+  --color-soft: var(--soft);
+  --color-soft-2: var(--soft-2);
   --font-sans: var(--font-body), system-ui, sans-serif;
   --font-head: var(--font-head), "Arial Narrow", Impact, sans-serif;
 }
@@ -42,21 +69,22 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   background-image:
-    radial-gradient(60% 50% at 10% 0%, rgba(255, 79, 163, .18), transparent 62%),
-    radial-gradient(55% 50% at 96% 100%, rgba(34, 211, 238, .12), transparent 62%),
-    radial-gradient(circle, rgba(255, 255, 255, .05) 1.2px, transparent 1.5px);
+    radial-gradient(60% 50% at 10% 0%, var(--glow-1), transparent 62%),
+    radial-gradient(55% 50% at 96% 100%, var(--glow-2), transparent 62%),
+    radial-gradient(circle, var(--dots) 1.2px, transparent 1.5px);
   background-size: auto, auto, 26px 26px;
   background-attachment: fixed;
 }
 ::selection { background: var(--accent); color: #fff; }
+html:not(.dark) .card { box-shadow: 0 1px 2px rgba(23, 18, 31, .04); }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 @utility card { @apply rounded-xl border border-border bg-surface/80 backdrop-blur-sm; }
 @utility btn { @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition disabled:opacity-50; }
-@utility btn-primary { @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition disabled:opacity-50 bg-accent text-accent-fg hover:-translate-y-px hover:shadow-[0_8px_28px_rgba(255,79,163,.35)]; }
-@utility btn-ghost { @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition disabled:opacity-50 border border-border bg-white/5 text-text hover:border-accent/60 hover:bg-white/10; }
-@utility btn-danger { @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition disabled:opacity-50 text-rose-400 hover:bg-rose-500/10; }
-@utility input { @apply w-full rounded-lg border border-border bg-white/5 px-3 py-2 text-sm text-text outline-none placeholder:text-muted/70 focus:border-accent; }
+@utility btn-primary { @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition disabled:opacity-50 bg-accent text-accent-fg hover:-translate-y-px hover:shadow-[0_8px_28px_color-mix(in_srgb,var(--accent)_35%,transparent)]; }
+@utility btn-ghost { @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition disabled:opacity-50 border border-border bg-soft text-text hover:border-accent/60 hover:bg-soft-2; }
+@utility btn-danger { @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition disabled:opacity-50 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10; }
+@utility input { @apply w-full rounded-lg border border-border bg-soft px-3 py-2 text-sm text-text outline-none placeholder:text-muted/70 focus:border-accent; }
 @utility label { @apply mb-1 block text-xs font-medium text-muted; }
 /* mot en dégradé, comme sur le site */
 @utility text-warm { background: var(--warm); -webkit-background-clip: text; background-clip: text; color: transparent; }

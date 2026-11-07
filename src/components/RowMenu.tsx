@@ -40,17 +40,17 @@ export function RowMenu({ id, kind }: { id: string; kind: "site" | "activity" })
     <div ref={ref} className="relative shrink-0">
       <button type="button" aria-label="Options" aria-expanded={open} disabled={pending}
         onClick={() => setOpen((o) => !o)}
-        className="grid size-7 place-items-center rounded-md text-muted hover:bg-white/5 hover:text-text disabled:opacity-50">
+        className="grid size-7 place-items-center rounded-md text-muted hover:bg-soft hover:text-text disabled:opacity-50">
         {pending ? "…" : <svg viewBox="0 0 24 24" className="size-4" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" /></svg>}
       </button>
       {open && (
         <div className="absolute right-0 z-20 mt-1 w-48 overflow-hidden rounded-lg border border-border bg-surface py-1 shadow-lg">
           {kind === "site" ? (
-            <button type="button" onClick={remove} className="w-full px-3 py-2 text-left text-sm hover:bg-white/5">
+            <button type="button" onClick={remove} className="w-full px-3 py-2 text-left text-sm hover:bg-soft">
               🗑️ Retirer de la liste<span className="block text-xs text-muted">les chiffres restent</span>
             </button>
           ) : (
-            <button type="button" onClick={remove} className="w-full px-3 py-2 text-left text-sm text-rose-400 hover:bg-white/5">🗑️ Supprimer</button>
+            <button type="button" onClick={remove} className="w-full px-3 py-2 text-left text-sm text-rose-600 dark:text-rose-400 hover:bg-soft">🗑️ Supprimer</button>
           )}
         </div>
       )}

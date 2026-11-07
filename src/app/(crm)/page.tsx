@@ -49,7 +49,7 @@ export default async function Dashboard() {
           <ul className="divide-y divide-border">
             {(feed as (Activity & { prospects: { id: string; company_name: string } | null })[] | null)?.length ? (
               (feed as (Activity & { prospects: { id: string; company_name: string } | null })[]).map((a) => (
-                <li key={a.id} className="flex items-start gap-1 pr-2 last:rounded-b-xl hover:bg-white/5">
+                <li key={a.id} className="flex items-start gap-1 pr-2 last:rounded-b-xl hover:bg-soft">
                   <Link href={`/prospects/${a.prospect_id}`} className="flex min-w-0 flex-1 items-start gap-3 px-4 py-3">
                     <span>{ACTIVITY_LABELS[a.type].emoji}</span>
                     <div className="min-w-0 flex-1">

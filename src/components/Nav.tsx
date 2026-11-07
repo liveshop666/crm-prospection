@@ -23,7 +23,7 @@ export function Nav({ unread }: { unread: number }) {
         <nav className="flex flex-col gap-1">
           {LINKS.map((l) => (
             <Link key={l.href} href={l.href}
-              className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${active(l.href) ? "bg-accent/15 font-semibold text-text shadow-[inset_3px_0_0_var(--accent)]" : "text-muted hover:bg-white/5 hover:text-text"}`}>
+              className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${active(l.href) ? "bg-accent/15 font-semibold text-text shadow-[inset_3px_0_0_var(--accent)]" : "text-muted hover:bg-soft hover:text-text"}`}>
               <span>{l.icon}</span>{l.label}
               {l.href === "/" && unread > 0 && <span className="ml-auto rounded-full bg-accent px-1.5 text-xs text-accent-fg">{unread}</span>}
             </Link>

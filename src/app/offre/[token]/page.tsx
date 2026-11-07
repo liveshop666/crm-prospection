@@ -55,7 +55,7 @@ export default async function PublicOffer({ params }: { params: Promise<{ token:
             ✅ Merci ! Proposition acceptée. Je reviens vers vous très vite pour la suite.
           </p>
         ) : offer.status === "refusee" ? (
-          <p className="mt-6 rounded-lg bg-white/5 p-4 text-center text-sm text-muted">Proposition déclinée. Merci pour votre retour.</p>
+          <p className="mt-6 rounded-lg bg-soft p-4 text-center text-sm text-muted">Proposition déclinée. Merci pour votre retour.</p>
         ) : (
           <div className="mt-6 grid gap-2 sm:grid-cols-2">
             <form action={answer.bind(null, token, true)}><button className="btn-primary w-full py-3">J&apos;accepte la proposition</button></form>

@@ -31,7 +31,7 @@ export function Stat({ label, value, hint }: { label: string; value: React.React
 
 export function ProspectLine({ p, right }: { p: Prospect; right?: React.ReactNode }) {
   return (
-    <Link href={`/prospects/${p.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-white/5">
+    <Link href={`/prospects/${p.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-soft">
       {p.is_unread ? <span className="size-2 shrink-0 rounded-full bg-accent" /> : <span className="size-2 shrink-0" />}
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-medium">{p.company_name}</div>

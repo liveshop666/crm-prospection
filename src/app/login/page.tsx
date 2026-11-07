@@ -43,7 +43,7 @@ function LoginForm() {
       <h1 className="font-head text-3xl leading-none font-extrabold uppercase">Connexion <span className="text-warm">à ton CRM</span></h1>
       <label className="block"><span className="label">Email</span><input name="email" type="email" required autoComplete="email" className="input" /></label>
       <label className="block"><span className="label">Mot de passe</span><input name="password" type="password" required autoComplete="current-password" className="input" /></label>
-      {error && <p className="text-sm text-rose-400">{error}</p>}
+      {error && <p className="text-sm text-rose-600 dark:text-rose-400">{error}</p>}
       <button disabled={loading} className="btn-primary w-full">{loading ? "Connexion…" : "Se connecter"}</button>
     </form>
   );
