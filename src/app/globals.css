@@ -8,6 +8,7 @@
   --muted: #6b6b76;
   --accent: #ea580c;
   --accent-fg: #ffffff;
+  --chart-bar: #ea580c;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -19,6 +20,7 @@
     --muted: #9a9aa6;
     --accent: #fb923c;
     --accent-fg: #1a0d03;
+    --chart-bar: #e8661a;
   }
 }
 
@@ -30,6 +32,7 @@
   --color-muted: var(--muted);
   --color-accent: var(--accent);
   --color-accent-fg: var(--accent-fg);
+  --color-chart-bar: var(--chart-bar);
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 }
 

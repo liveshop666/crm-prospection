@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { findProspect, logActivity, upsertProspect } from "@/lib/crm";
+import { recordSiteEvent } from "@/lib/events";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -66,6 +67,7 @@ export async function POST(req: NextRequest) {
         content: `❌ RDV annulé (${when})${p.cancellationReason ? ` — ${p.cancellationReason}` : ""}`,
       });
       await db.from("prospects").update({ is_unread: true }).eq("id", prospect.id);
+      await recordSiteEvent(db, { type: "rdv_annule", ref: prospect.ref_slug, prospect_id: prospect.id, prospect_name: prospect.company_name, metadata: { when } });
     } else if (event === "BOOKING_CREATED" || event === "BOOKING_RESCHEDULED") {
       await logActivity(db, {
         prospect, type: "rdv", created_by: "site", metadata,

@@ -7,6 +7,7 @@ const LINKS = [
   { href: "/", label: "Accueil", icon: "🏠" },
   { href: "/pipeline", label: "Pipeline", icon: "📊" },
   { href: "/prospects", label: "Prospects", icon: "👥" },
+  { href: "/site", label: "Site", icon: "🌐" },
   { href: "/offres", label: "Offres", icon: "📄" },
 ];
 
@@ -32,7 +33,7 @@ export function Nav({ unread }: { unread: number }) {
         <form action={signOut} className="mt-auto"><button className="btn-ghost w-full">Se déconnecter</button></form>
       </aside>
       {/* Mobile */}
-      <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] md:hidden">
         {LINKS.map((l) => (
           <Link key={l.href} href={l.href} className={`relative flex flex-col items-center py-2 text-[11px] ${active(l.href) ? "font-semibold text-accent" : "text-muted"}`}>
             <span className="text-lg">{l.icon}</span>{l.label}

@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { STATUS_RANK } from "./constants";
+import { recordSiteEvent, type SiteEventType } from "./events";
 import { normalizePhone } from "./format";
 import type { Activity, ActivityType, Prospect, ProspectStatus } from "./types";
 
@@ -138,6 +139,15 @@ export async function logActivity(db: SupabaseClient, input: LogActivityInput) {
     const { data, error: e2 } = await db.from("prospects").update(patch).eq("id", prospect.id).select().single();
     if (e2) throw e2;
     updated = data as Prospect;
+  }
+
+  // journal du site (reste même si la fiche est supprimée)
+  const SITE: Partial<Record<ActivityType, SiteEventType>> = { clic_lien: "clic_lien", formulaire: "formulaire", rdv: "rdv" };
+  if (SITE[type] && ["site", "client"].includes(by)) {
+    await recordSiteEvent(db, {
+      type: SITE[type]!, ref: updated.ref_slug, prospect_id: updated.id, prospect_name: updated.company_name,
+      metadata: { content: (input.content ?? "").slice(0, 300) },
+    });
   }
 
   return { activity: activity as Activity, prospect: updated };

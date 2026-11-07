@@ -38,6 +38,11 @@ Colle ces 3 valeurs dans ton bloc-notes.
 
 ---
 
+### 1.5 Journal du site (visites, clics « Réserver »)
+Toujours dans **SQL Editor** → **New query** → colle [`supabase/migrations/0002_site_events.sql`](../supabase/migrations/0002_site_events.sql) → **Run**.
+
+---
+
 ## ÉTAPE 2 — Vercel (mettre le CRM en ligne)
 
 ### 2.1 Importer le projet GitHub
