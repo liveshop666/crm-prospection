@@ -26,7 +26,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
       if (!count) {
         await logActivity(db, {
           prospect: p, type: "clic_lien", content: `A ouvert ton site (clic n°${p.link_clicks + 1})`,
-          metadata: { user_agent: ua.slice(0, 200) }, created_by: "site", notify: false,
+          metadata: { user_agent: ua.slice(0, 200) }, created_by: "site",
         });
       }
     }

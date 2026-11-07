@@ -82,16 +82,15 @@ Pour retrouver le prospect, donne **un** de : `prospect_id`, `ref`, `phone`, `em
 |---|---|---|
 | `sms_sortant` / `email_sortant` | l'agent a envoyé un message | statut → **contacté** |
 | `relance` | relance envoyée | met à jour la date de dernier contact |
-| `sms_entrant` / `email_entrant` | le prospect a répondu | 🔔 notification, fiche marquée « à voir », relances stoppées. Un « STOP » coupe tout définitivement. |
-| `rdv` | RDV pris (Cal.com…) | statut → **RDV**, 🔔 notification |
-| `formulaire` | demande via ton site | statut → **chaud**, 🔔 notification |
+| `sms_entrant` / `email_entrant` | le prospect a répondu | fiche marquée « Nouveau à voir », relances stoppées. Un « STOP » coupe tout définitivement. |
+| `rdv` | RDV pris (Cal.com…) | statut → **RDV**, fiche marquée « Nouveau à voir » |
+| `formulaire` | demande via ton site | statut → **chaud**, fiche marquée « Nouveau à voir » |
 | `note` | info libre | — |
 | `stop` | désinscription | ne plus jamais contacter |
 
 Champs optionnels :
 - `"status": "chaud"` → force le statut (ex : l'IA a classé la réponse). Valeurs : `nouveau, contacte, a_visite, chaud, rdv, offre_envoyee, valide, perdu`
 - `"prospect": { "ai_summary": "...", "interest": "...", "score": 90 }` → met à jour la fiche en même temps
-- `"notify": false` → pas de notification
 
 Un message entrant d'un numéro / email inconnu **crée automatiquement** un prospect.
 
@@ -106,34 +105,7 @@ Un message entrant d'un numéro / email inconnu **crée automatiquement** un pro
 
 ## 5. Statistiques
 
-`GET /api/n8n/stats` → envoyés / réponses / clics du jour et de la semaine, montant signé… Parfait pour un récap quotidien sur ton téléphone.
-
----
-
-## Webhooks envoyés PAR le CRM vers n8n
-
-Quand quelque chose d'important arrive, le CRM fait un `POST` sur `N8N_NOTIFY_WEBHOOK_URL` (header `x-crm-secret`) :
-
-```json
-{
-  "event": "prospect.formulaire",
-  "at": "2026-11-07T15:02:11.000Z",
-  "prospect": { "id": "...", "company_name": "Boulangerie Martin", "phone": "+33612345678", "status": "chaud", "interest": "site vitrine" },
-  "activity": { "type": "formulaire", "content": "Besoin : Site internet\nBudget : 1500 €\n..." },
-  "link": "https://crm.tondomaine.fr/prospects/..."
-}
-```
-
-| `event` | Quand |
-|---|---|
-| `prospect.formulaire` | demande reçue via ton site |
-| `prospect.rdv` | RDV pris |
-| `prospect.reponse` | réponse SMS / email |
-| `prospect.chaud` | passé en chaud (classement IA) |
-| `offre.acceptee` | ✅ le client a accepté ton offre |
-| `offre.refusee` | le client a refusé |
-
-→ Facultatif : ce webhook sert seulement si tu veux que n8n fasse quelque chose de plus (ex : t'envoyer un email récap). Les notifications sur ton téléphone seront gérées **directement par le CRM** (notifications push de l'appli installée).
+`GET /api/n8n/stats` → envoyés / réponses / clics du jour et de la semaine, montant signé… Parfait pour un récap quotidien par email.
 
 ---
 

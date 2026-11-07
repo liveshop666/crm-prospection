@@ -6,10 +6,10 @@ Mon CRM à moi : **tout ce que fait l'agent de prospection (n8n) et tout ce que 
             ┌────────────── n8n (toute l'automatisation) ──────────────┐
             │  recherche prospects · SMS / emails IA · réponses · RDV  │
             └───────┬───────────────────────────────▲──────────────────┘
-       API (clé)    │                               │ webhook (facultatif)
+       API (clé)    │                               │
                     ▼                               │
    ┌───────────────────────────── CRM (ce projet) ──┴───────────────┐
-   │ Accueil · Pipeline · Fiches clients + historique · Offres      │──► 🔔 téléphone
+   │ Accueil · Pipeline · Fiches clients + historique · Offres      │
    └───────▲──────────────────────────▲─────────────────────▲───────┘
            │ /r/xxx (clic SMS)        │ formulaire du site   │ /offre/xxx (« J'accepte »)
        le prospect               ton site vitrine        le client
@@ -20,9 +20,9 @@ Mon CRM à moi : **tout ce que fait l'agent de prospection (n8n) et tout ce que 
 1. **n8n** trouve l'entreprise → elle apparaît dans le CRM en 🆕 *Nouveau*
 2. **n8n** envoie un SMS / email personnalisé avec **son lien unique** → 📨 *Contacté*
 3. Le prospect clique → 👀 *A visité* (tu vois combien de fois)
-4. Il remplit le formulaire de ton site ou prend RDV → 🔥 *Chaud* / 📅 *RDV* + **notification sur ton téléphone**
+4. Il remplit le formulaire de ton site ou prend RDV → 🔥 *Chaud* / 📅 *RDV*, et il apparaît dans **🔔 Nouveau à voir** sur l'accueil du CRM
 5. Tu le rappelles, tu crées une **offre** dans sa fiche et tu lui envoies le lien → 📄 *Offre envoyée*
-6. Il clique « J'accepte » → ✅ *Validé* + notification
+6. Il clique « J'accepte » → ✅ *Validé*
 
 S'il répond **STOP**, il est marqué ⛔ et l'agent ne le recontacte plus jamais.
 

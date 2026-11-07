@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     const result = await logActivity(db, {
       prospect, type: b.type, content: b.content, metadata: b.metadata,
       status: b.status as ProspectStatus | undefined, prospectPatch: b.prospect,
-      created_by: b.created_by ?? "n8n", notify: b.notify,
+      created_by: b.created_by ?? "n8n",
     });
     return NextResponse.json(result);
   } catch (e) { return apiError(e); }

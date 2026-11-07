@@ -2,7 +2,6 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { STATUS_RANK } from "./constants";
 import { normalizePhone } from "./format";
-import { notifyN8n, type NotifyEvent } from "./notify";
 import type { Activity, ActivityType, Prospect, ProspectStatus } from "./types";
 
 const STOP_RE = /^\s*(stop|stop sms|désinscri\w*|desinscri\w*|ne plus (me )?contacter)\b/i;
@@ -74,15 +73,6 @@ const AUTO_STATUS: Partial<Record<ActivityType, ProspectStatus>> = {
   offre_acceptee: "valide",
 };
 
-const NOTIFY_ON: Partial<Record<ActivityType, NotifyEvent>> = {
-  formulaire: "prospect.formulaire",
-  rdv: "prospect.rdv",
-  sms_entrant: "prospect.reponse",
-  email_entrant: "prospect.reponse",
-  offre_acceptee: "offre.acceptee",
-  offre_refusee: "offre.refusee",
-};
-
 export interface LogActivityInput {
   prospect: Prospect;
   type: ActivityType;
@@ -93,12 +83,11 @@ export interface LogActivityInput {
   status?: ProspectStatus;
   /** Champs prospect à mettre à jour en même temps (ai_summary, interest, score...). */
   prospectPatch?: Record<string, unknown>;
-  notify?: boolean;
 }
 
 /**
  * Enregistre un événement dans la timeline et applique toute la logique CRM :
- * avancement du pipeline, détection STOP, marquage non-lu, notification n8n.
+ * avancement du pipeline, détection STOP, marquage « nouveau à voir ».
  */
 export async function logActivity(db: SupabaseClient, input: LogActivityInput) {
   const { prospect, type } = input;
@@ -149,18 +138,6 @@ export async function logActivity(db: SupabaseClient, input: LogActivityInput) {
     const { data, error: e2 } = await db.from("prospects").update(patch).eq("id", prospect.id).select().single();
     if (e2) throw e2;
     updated = data as Prospect;
-  }
-
-  if (input.notify !== false && by !== "moi") {
-    let event = NOTIFY_ON[type];
-    if (!event && newStatus === "chaud" && prospect.status !== "chaud") event = "prospect.chaud";
-    if (event && !isStop) {
-      await notifyN8n(event, {
-        prospect: { id: updated.id, company_name: updated.company_name, contact_name: updated.contact_name, phone: updated.phone, email: updated.email, status: updated.status, interest: updated.interest },
-        activity: { type, content: input.content ?? null, metadata: input.metadata ?? {} },
-        link: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/prospects/${updated.id}`,
-      });
-    }
   }
 
   return { activity: activity as Activity, prospect: updated };

@@ -111,4 +111,4 @@ Vérifie l'adresse affichée sous **Domains** :
 | Page d'erreur / build rouge sur Vercel | Une variable est mal copiée (espace en trop, nom mal écrit). Vérifie dans Settings → Environment Variables puis **Redeploy**. |
 | Pages vides / erreur après connexion | Le SQL de l'étape 1.2 n'a pas été exécuté. Refais-le. |
 
-Les variables pour n8n (`N8N_NOTIFY_WEBHOOK_URL`, `N8N_WEBHOOK_SECRET`, `PUBLIC_SITE_ORIGINS`) seront ajoutées plus tard, quand on branchera n8n.
+La variable `PUBLIC_SITE_ORIGINS` (adresse de ton site, pour le formulaire) sera ajoutée plus tard, quand on reliera ton site.
