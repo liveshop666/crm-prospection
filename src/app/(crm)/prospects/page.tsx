@@ -46,7 +46,7 @@ export default async function ProspectsPage({ searchParams }: { searchParams: Pr
               </thead>
               <tbody className="divide-y divide-border">
                 {prospects.map((p) => (
-                  <tr key={p.id} className="hover:bg-bg">
+                  <tr key={p.id} className="hover:bg-white/5">
                     <td className="px-4 py-2.5">
                       <Link href={`/prospects/${p.id}`} className="flex items-center gap-2 font-medium">
                         {p.is_unread && <span className="size-2 rounded-full bg-accent" />}

@@ -19,7 +19,7 @@ export function Kanban({ prospects }: { prospects: Prospect[] }) {
   };
 
   return (
-    <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-4 md:-mx-8 md:px-8">
+    <div className="flex snap-x gap-3 overflow-x-auto pb-4">
       {STATUSES.map((s) => {
         const col = items.filter((p) => p.status === s.value);
         return (
@@ -38,7 +38,7 @@ export function Kanban({ prospects }: { prospects: Prospect[] }) {
                     <span className="truncate">{p.company_name}</span>
                   </div>
                   <div className="mt-0.5 truncate text-xs text-muted">{[p.sector, p.city].filter(Boolean).join(" · ") || "—"}</div>
-                  {p.interest && <div className="mt-2 inline-block rounded bg-bg px-1.5 py-0.5 text-[11px]">{p.interest}</div>}
+                  {p.interest && <div className="mt-2 inline-block rounded bg-white/5 px-1.5 py-0.5 text-[11px]">{p.interest}</div>}
                   <div className="mt-2 text-[11px] text-muted">{timeAgo(p.updated_at)}{p.link_clicks > 0 && ` · 👀 ${p.link_clicks}`}</div>
                 </Link>
               ))}

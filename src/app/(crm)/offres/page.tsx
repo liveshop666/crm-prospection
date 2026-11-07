@@ -21,7 +21,7 @@ export default async function OffersPage() {
       </div>
       <div className="card divide-y divide-border overflow-hidden">
         {offers.length === 0 ? <Empty>Aucune offre pour l&apos;instant.</Empty> : offers.map((o) => (
-          <Link key={o.id} href={`/prospects/${o.prospect_id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-bg">
+          <Link key={o.id} href={`/prospects/${o.prospect_id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-white/5">
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-medium">{o.title}</div>
               <div className="truncate text-xs text-muted">{o.prospects?.company_name} · {date(o.created_at)}</div>

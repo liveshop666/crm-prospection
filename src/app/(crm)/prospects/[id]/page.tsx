@@ -34,7 +34,7 @@ export default async function ProspectPage({ params, searchParams }: { params: P
 
       <div className="mt-2 mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{prospect.company_name} {prospect.opted_out && <span title="Ne plus contacter">⛔</span>}</h1>
+          <h1 className="font-head text-4xl leading-none font-extrabold tracking-wide uppercase">{prospect.company_name} {prospect.opted_out && <span title="Ne plus contacter">⛔</span>}</h1>
           <p className="mt-1 text-sm text-muted">
             {[prospect.contact_name, prospect.sector, prospect.city].filter(Boolean).join(" · ") || "—"}
             {prospect.score != null && <> · score <b className="text-text">{prospect.score}</b></>}
@@ -152,7 +152,7 @@ export default async function ProspectPage({ params, searchParams }: { params: P
                         <div className="-mt-1"><RowMenu id={a.id} kind="activity" /></div>
                       </div>
                       {a.content && (
-                        <div className={`mt-1 text-sm whitespace-pre-line ${inbound ? "rounded-lg bg-bg p-3" : "text-muted"}`}>{a.content}</div>
+                        <div className={`mt-1 text-sm whitespace-pre-line ${inbound ? "rounded-lg bg-white/5 p-3" : "text-muted"}`}>{a.content}</div>
                       )}
                       {typeof a.metadata?.subject === "string" && <div className="mt-1 text-xs text-muted">Objet : {a.metadata.subject}</div>}
                     </li>

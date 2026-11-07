@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { logActivity } from "@/lib/crm";
@@ -39,10 +40,10 @@ export default async function PublicOffer({ params }: { params: Promise<{ token:
 
   return (
     <main className="mx-auto max-w-xl px-4 py-10">
-      <div className="mb-6 text-sm font-semibold text-accent">{BRAND}</div>
+      <div className="mb-6 flex items-center gap-3"><Image src="/logo.png" alt="" width={44} height={44} className="rounded-full" /><span className="font-head text-2xl font-extrabold tracking-wide uppercase">{BRAND}</span></div>
       <div className="card p-6">
         <p className="text-sm text-muted">Proposition pour {offer.prospects.company_name} · {date(offer.created_at)}</p>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight">{offer.title}</h1>
+        <h1 className="mt-2 font-head text-4xl leading-none font-extrabold uppercase">{offer.title}</h1>
         {offer.description && <p className="mt-4 text-sm whitespace-pre-line">{offer.description}</p>}
         <div className="mt-6 flex items-baseline justify-between border-t border-border pt-4">
           <span className="text-sm text-muted">Montant</span>
@@ -54,7 +55,7 @@ export default async function PublicOffer({ params }: { params: Promise<{ token:
             ✅ Merci ! Proposition acceptée. Je reviens vers vous très vite pour la suite.
           </p>
         ) : offer.status === "refusee" ? (
-          <p className="mt-6 rounded-lg bg-bg p-4 text-center text-sm text-muted">Proposition déclinée. Merci pour votre retour.</p>
+          <p className="mt-6 rounded-lg bg-white/5 p-4 text-center text-sm text-muted">Proposition déclinée. Merci pour votre retour.</p>
         ) : (
           <div className="mt-6 grid gap-2 sm:grid-cols-2">
             <form action={answer.bind(null, token, true)}><button className="btn-primary w-full py-3">J&apos;accepte la proposition</button></form>

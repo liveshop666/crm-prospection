@@ -1,4 +1,5 @@
 import { Nav } from "@/components/Nav";
+import { Brand } from "@/components/Brand";
 import { RefreshButton } from "@/components/RefreshButton";
 import { createClient } from "@/lib/supabase/server";
 
@@ -11,7 +12,7 @@ export default async function CrmLayout({ children }: { children: React.ReactNod
     <div className="flex min-h-dvh">
       <Nav unread={count ?? 0} />
       <main className="min-w-0 flex-1 px-4 pt-4 pb-24 md:px-8 md:pb-10">
-        <div className="mb-2 flex justify-end"><RefreshButton /></div>
+        <div className="mb-2 flex items-center justify-between md:justify-end"><span className="md:hidden"><Brand size={34} /></span><RefreshButton /></div>
         {children}
       </main>
     </div>

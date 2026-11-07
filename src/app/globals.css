@@ -1,52 +1,64 @@
 @import "tailwindcss";
 
-:root {
-  --bg: #f7f7f8;
-  --surface: #ffffff;
-  --border: #e6e6ea;
-  --text: #17171c;
-  --muted: #6b6b76;
-  --accent: #ea580c;
-  --accent-fg: #ffffff;
-  --chart-bar: #ea580c;
-}
+/* Le CRM reprend le style « nuit » de solvelab.fr : toujours sombre. */
+@custom-variant dark (&:where(.dark, .dark *));
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0c0c0f;
-    --surface: #16161b;
-    --border: #2a2a32;
-    --text: #ededf0;
-    --muted: #9a9aa6;
-    --accent: #fb923c;
-    --accent-fg: #1a0d03;
-    --chart-bar: #e8661a;
-  }
+:root {
+  --bg: #0b0710;
+  --surface: #161022;
+  --surface-2: #1d1530;
+  --border: #2b2340;
+  --text: #ffffff;
+  --muted: #b8b0c8;
+  --accent: #ff4fa3;      /* rose SolveLab */
+  --accent-fg: #0b0710;
+  --cyan: #22d3ee;
+  --gold: #ffd93d;        /* jaune du logo */
+  --chart-bar: #f2479a;   /* rose validé pour les barres sur fond sombre */
+  --warm: linear-gradient(90deg, #ffb547, #ff4fa3 50%, #8b3dff);
+  color-scheme: dark;
 }
 
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
   --color-border: var(--border);
   --color-text: var(--text);
   --color-muted: var(--muted);
   --color-accent: var(--accent);
   --color-accent-fg: var(--accent-fg);
+  --color-cyan: var(--cyan);
+  --color-gold: var(--gold);
   --color-chart-bar: var(--chart-bar);
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-body), system-ui, sans-serif;
+  --font-head: var(--font-head), "Arial Narrow", Impact, sans-serif;
 }
 
+html { background: var(--bg); }
 body {
-  background: var(--bg);
+  background-color: var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  background-image:
+    radial-gradient(60% 50% at 10% 0%, rgba(255, 79, 163, .18), transparent 62%),
+    radial-gradient(55% 50% at 96% 100%, rgba(34, 211, 238, .12), transparent 62%),
+    radial-gradient(circle, rgba(255, 255, 255, .05) 1.2px, transparent 1.5px);
+  background-size: auto, auto, 26px 26px;
+  background-attachment: fixed;
 }
+::selection { background: var(--accent); color: #fff; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-@utility card { @apply rounded-xl border border-border bg-surface; }
-@utility btn { @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50; }
-@utility btn-primary { @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50 bg-accent text-accent-fg hover:opacity-90; }
-@utility btn-ghost { @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50 border border-border bg-surface hover:bg-bg; }
-@utility btn-danger { @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950; }
-@utility input { @apply w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none placeholder:text-muted focus:border-accent; }
+@utility card { @apply rounded-xl border border-border bg-surface/80 backdrop-blur-sm; }
+@utility btn { @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition disabled:opacity-50; }
+@utility btn-primary { @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition disabled:opacity-50 bg-accent text-accent-fg hover:-translate-y-px hover:shadow-[0_8px_28px_rgba(255,79,163,.35)]; }
+@utility btn-ghost { @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition disabled:opacity-50 border border-border bg-white/5 text-text hover:border-accent/60 hover:bg-white/10; }
+@utility btn-danger { @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition disabled:opacity-50 text-rose-400 hover:bg-rose-500/10; }
+@utility input { @apply w-full rounded-lg border border-border bg-white/5 px-3 py-2 text-sm text-text outline-none placeholder:text-muted/70 focus:border-accent; }
 @utility label { @apply mb-1 block text-xs font-medium text-muted; }
+/* mot en dégradé, comme sur le site */
+@utility text-warm { background: var(--warm); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+select.input option { background: var(--surface); color: var(--text); }

@@ -7,11 +7,11 @@ export function StatusBadge({ status }: { status: ProspectStatus }) {
   return <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap ${s.color}`}>{s.emoji} {s.label}</span>;
 }
 
-export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: React.ReactNode }) {
+export function PageHeader({ title, subtitle, action }: { title: React.ReactNode; subtitle?: string; action?: React.ReactNode }) {
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+        <h1 className="font-head text-4xl leading-none font-extrabold tracking-wide uppercase md:text-5xl">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
       </div>
       {action}
@@ -23,7 +23,7 @@ export function Stat({ label, value, hint }: { label: string; value: React.React
   return (
     <div className="card p-4">
       <div className="text-xs text-muted">{label}</div>
-      <div className="mt-1 text-2xl font-semibold tabular-nums">{value}</div>
+      <div className="mt-1 font-head text-3xl font-extrabold tabular-nums">{value}</div>
       {hint && <div className="mt-0.5 text-xs text-muted">{hint}</div>}
     </div>
   );
@@ -31,7 +31,7 @@ export function Stat({ label, value, hint }: { label: string; value: React.React
 
 export function ProspectLine({ p, right }: { p: Prospect; right?: React.ReactNode }) {
   return (
-    <Link href={`/prospects/${p.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-bg">
+    <Link href={`/prospects/${p.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-white/5">
       {p.is_unread ? <span className="size-2 shrink-0 rounded-full bg-accent" /> : <span className="size-2 shrink-0" />}
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-medium">{p.company_name}</div>

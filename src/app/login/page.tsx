@@ -1,6 +1,7 @@
 "use client";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+import { Brand } from "@/components/Brand";
 import { createClient } from "@/lib/supabase/client";
 
 function LoginForm() {
@@ -38,12 +39,11 @@ function LoginForm() {
 
   return (
     <form onSubmit={onSubmit} className="card w-full max-w-sm space-y-4 p-6">
-      <div className="flex items-center gap-2 text-lg font-semibold">
-        <span className="grid size-8 place-items-center rounded-lg bg-accent text-accent-fg">C</span> CRM Prospection
-      </div>
+      <div className="mb-2"><Brand size={48} /></div>
+      <h1 className="font-head text-3xl leading-none font-extrabold uppercase">Connexion <span className="text-warm">à ton CRM</span></h1>
       <label className="block"><span className="label">Email</span><input name="email" type="email" required autoComplete="email" className="input" /></label>
       <label className="block"><span className="label">Mot de passe</span><input name="password" type="password" required autoComplete="current-password" className="input" /></label>
-      {error && <p className="text-sm text-rose-600">{error}</p>}
+      {error && <p className="text-sm text-rose-400">{error}</p>}
       <button disabled={loading} className="btn-primary w-full">{loading ? "Connexion…" : "Se connecter"}</button>
     </form>
   );

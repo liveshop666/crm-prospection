@@ -35,7 +35,7 @@ export default async function SitePage({ searchParams }: { searchParams: Promise
     (() => {
       // les lignes « retirées de la liste » restent comptées dans les chiffres, mais ne s'affichent plus ici
       let q = supabase.from("site_events").select("*").filter("metadata->>hidden", "is", null)
-        .order("created_at", { ascending: false }).limit(100);
+        .order("created_at", { ascending: false }).limit(50);
       if (type && LABEL[type]) q = q.eq("type", type);
       return q;
     })(),
@@ -124,9 +124,9 @@ export default async function SitePage({ searchParams }: { searchParams: Promise
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
           <h2 className="text-sm font-semibold">Derniers passages</h2>
           <div className="flex flex-wrap gap-1 text-xs">
-            <Link href="/site" className={`rounded-full border border-border px-2 py-1 ${!type ? "bg-bg font-semibold" : "text-muted"}`}>Tout</Link>
+            <Link href="/site" className={`rounded-full border border-border px-2 py-1 ${!type ? "bg-white/5 font-semibold" : "text-muted"}`}>Tout</Link>
             {Object.entries(LABEL).map(([k, v]) => (
-              <Link key={k} href={`/site?type=${k}`} className={`rounded-full border border-border px-2 py-1 ${type === k ? "bg-bg font-semibold" : "text-muted"}`}>{v.emoji} {v.label}</Link>
+              <Link key={k} href={`/site?type=${k}`} className={`rounded-full border border-border px-2 py-1 ${type === k ? "bg-white/5 font-semibold" : "text-muted"}`}>{v.emoji} {v.label}</Link>
             ))}
           </div>
         </div>

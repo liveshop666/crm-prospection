@@ -19,7 +19,7 @@ export default async function Dashboard() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <PageHeader title="Bonjour 👋" subtitle="Tout ce que ton agent a fait, et ce que tes clients ont répondu."
+      <PageHeader title={<>Bonjour <span className="text-warm">SolveLab</span></>} subtitle="Tout ce que ton agent a fait, et ce que tes clients ont répondu."
         action={<Link href="/prospects/nouveau" className="btn-primary">+ Prospect</Link>} />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -49,7 +49,7 @@ export default async function Dashboard() {
           <ul className="divide-y divide-border">
             {(feed as (Activity & { prospects: { id: string; company_name: string } | null })[] | null)?.length ? (
               (feed as (Activity & { prospects: { id: string; company_name: string } | null })[]).map((a) => (
-                <li key={a.id} className="flex items-start gap-1 pr-2 last:rounded-b-xl hover:bg-bg">
+                <li key={a.id} className="flex items-start gap-1 pr-2 last:rounded-b-xl hover:bg-white/5">
                   <Link href={`/prospects/${a.prospect_id}`} className="flex min-w-0 flex-1 items-start gap-3 px-4 py-3">
                     <span>{ACTIVITY_LABELS[a.type].emoji}</span>
                     <div className="min-w-0 flex-1">
