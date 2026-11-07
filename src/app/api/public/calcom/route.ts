@@ -39,7 +39,8 @@ export async function POST(req: NextRequest) {
     const name: string | null = attendee.name ?? val("name");
     const phone: string | null = val("attendeePhoneNumber") ?? val("phone") ?? attendee.phoneNumber ?? null;
     const ref: string | undefined = p.metadata?.ref ?? undefined;
-    const notes: string | null = val("notes") ?? p.description ?? null;
+    // uniquement le message laissé par le client (pas la description du type de RDV)
+    const notes: string | null = val("notes") ?? (typeof p.additionalNotes === "string" && p.additionalNotes.trim() ? p.additionalNotes : null);
 
     const start = p.startTime ? new Date(p.startTime) : null;
     const when = start
