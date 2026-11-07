@@ -67,7 +67,7 @@ export default async function ProspectPage({ params }: { params: Promise<{ id: s
               <div className="flex justify-between gap-2"><dt className="text-muted">Visites du site</dt><dd>{prospect.link_clicks}</dd></div>
             </dl>
             <div>
-              <span className="label">Lien personnalisé (à mettre dans le SMS)</span>
+              <span className="label">Lien personnalisé (à mettre dans l&apos;email)</span>
               <div className="flex gap-2"><input readOnly value={link} className="input text-xs" /><CopyButton text={link} /></div>
             </div>
           </section>

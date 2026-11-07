@@ -55,6 +55,8 @@ export async function POST(req: NextRequest) {
       }));
     }
 
+    // « Appel découverte, 15 min between Nolla and Client » → « Appel découverte, 15 min »
+    const title: string | null = p.eventTitle ?? (typeof p.title === "string" ? p.title.split(/ between | entre /)[0] : null);
     const metadata = { uid: p.uid, event, start: p.startTime, end: p.endTime, title: p.title, location: p.location ?? null };
 
     if (event === "BOOKING_CANCELLED") {
@@ -66,7 +68,7 @@ export async function POST(req: NextRequest) {
     } else if (event === "BOOKING_CREATED" || event === "BOOKING_RESCHEDULED") {
       await logActivity(db, {
         prospect, type: "rdv", created_by: "site", metadata,
-        content: `${event === "BOOKING_RESCHEDULED" ? "RDV déplacé au" : "RDV le"} ${when}${p.title ? ` — ${p.title}` : ""}${notes ? `\n${notes}` : ""}`,
+        content: `${event === "BOOKING_RESCHEDULED" ? "RDV déplacé au" : "RDV le"} ${when}${title ? ` — ${title}` : ""}${notes ? `\n${notes}` : ""}`,
       });
     }
     return NextResponse.json({ ok: true });
