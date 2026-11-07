@@ -1,4 +1,5 @@
 import "server-only";
+import { supabaseUrl } from "@/lib/supabase/url";
 import { createClient } from "@supabase/supabase-js";
 
 /**
@@ -8,8 +9,8 @@ import { createClient } from "@supabase/supabase-js";
  */
 export function createAdminClient() {
   return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    supabaseUrl(),
+    process.env.SUPABASE_SERVICE_ROLE_KEY!.trim(),
     { auth: { persistSession: false, autoRefreshToken: false } },
   );
 }

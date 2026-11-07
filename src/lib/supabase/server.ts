@@ -1,12 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
+import { supabaseUrl } from "@/lib/supabase/url";
 import { cookies } from "next/headers";
 
 /** Client Supabase côté serveur, avec la session de l'utilisateur connecté (respecte la RLS). */
 export async function createClient() {
   const cookieStore = await cookies();
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl(),
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!.trim(),
     {
       cookies: {
         getAll: () => cookieStore.getAll(),
