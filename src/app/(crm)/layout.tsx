@@ -1,4 +1,5 @@
 import { Nav } from "@/components/Nav";
+import { RefreshButton } from "@/components/RefreshButton";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +10,10 @@ export default async function CrmLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex min-h-dvh">
       <Nav unread={count ?? 0} />
-      <main className="min-w-0 flex-1 px-4 pt-6 pb-24 md:px-8 md:pb-10">{children}</main>
+      <main className="min-w-0 flex-1 px-4 pt-4 pb-24 md:px-8 md:pb-10">
+        <div className="mb-2 flex justify-end"><RefreshButton /></div>
+        {children}
+      </main>
     </div>
   );
 }

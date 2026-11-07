@@ -21,10 +21,20 @@ async function getProspect(supabase: Awaited<ReturnType<typeof db>>, id: string)
 
 const formObj = (fd: FormData) => Object.fromEntries([...fd.entries()].map(([k, v]) => [k, String(v)]));
 
-export async function createProspect(fd: FormData) {
-  const supabase = await db();
-  const { prospect } = await upsertProspect(supabase, { ...formObj(fd), source: "manuel" });
-  redirect(`/prospects/${prospect.id}`);
+const errMsg = (e: unknown) =>
+  e instanceof Error ? e.message : typeof e === "object" && e && "message" in e ? String((e as { message: unknown }).message) : String(e);
+
+export async function createProspect(_prev: { error?: string } | undefined, fd: FormData): Promise<{ error?: string }> {
+  let target: string;
+  try {
+    const supabase = await db();
+    const { prospect, created } = await upsertProspect(supabase, { ...formObj(fd), source: "manuel" });
+    target = `/prospects/${prospect.id}${created ? "" : "?existe=1"}`;
+  } catch (e) {
+    console.error("[createProspect]", e);
+    return { error: `Impossible de créer la fiche : ${errMsg(e)}` };
+  }
+  redirect(target);
 }
 
 export async function updateProspect(id: string, fd: FormData) {

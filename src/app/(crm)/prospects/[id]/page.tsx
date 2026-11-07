@@ -10,8 +10,9 @@ import type { Activity, Offer, Prospect } from "@/lib/types";
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
-export default async function ProspectPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ProspectPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ existe?: string }> }) {
   const { id } = await params;
+  const { existe } = await searchParams;
   const supabase = await createClient();
   const [{ data: p }, { data: acts }, { data: offs }] = await Promise.all([
     supabase.from("prospects").select("*").eq("id", id).maybeSingle(),
@@ -40,6 +41,12 @@ export default async function ProspectPage({ params }: { params: Promise<{ id: s
         </div>
         <StatusSelect key={prospect.status} id={prospect.id} status={prospect.status} />
       </div>
+
+      {existe && (
+        <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
+          Une fiche existait déjà avec ce téléphone, cet email ou ce SIRET : la voici (les champs vides ont été complétés).
+        </div>
+      )}
 
       {prospect.opted_out && (
         <div className="mb-4 rounded-lg border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300">
