@@ -48,27 +48,16 @@ Installable sur le téléphone comme une appli (Safari / Chrome → « Ajouter �
 
 ## Installation (≈ 15 min)
 
-### 1. Supabase
-1. Crée un projet sur [supabase.com](https://supabase.com).
-2. **SQL Editor** → colle le contenu de [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql) → *Run*.
-3. **Authentication → Users → Add user** : crée ton compte (email + mot de passe).
-4. **Authentication → Sign In / Providers** : désactive *Allow new users to sign up* (personne d'autre ne peut créer de compte).
-5. **Project Settings → API** : récupère l'URL, la clé `anon` et la clé `service_role`.
+👉 **Suis le guide pas à pas : [`docs/INSTALLATION.md`](docs/INSTALLATION.md)** (où trouver chaque clé Supabase, quoi mettre dans chaque champ Vercel).
 
-### 2. En local
+En résumé : **1. Supabase** (créer le projet, coller le SQL, créer ton utilisateur, copier l'URL + 2 clés) → **2. Vercel** (*Add New → Project → Import* `crm-prospection`, coller les variables, *Deploy*) → **3. Se connecter**.
+
+Pour développer en local :
 ```bash
 npm install
 cp .env.example .env.local   # puis remplis les valeurs
 npm run dev                  # http://localhost:3000
 ```
-
-### 3. En ligne (Vercel)
-1. [vercel.com/new](https://vercel.com/new) → importe ce dépôt GitHub.
-2. Ajoute les variables de `.env.example` dans *Environment Variables*.
-3. Deploy. Mets l'URL obtenue dans `NEXT_PUBLIC_APP_URL` (et redéploie).
-
-### 4. n8n
-Dans n8n, crée un credential **Header Auth** : `x-api-key` = ta `CRM_API_KEY`. Ensuite chaque workflow appelle l'API du CRM — tout est décrit dans [`docs/API-N8N.md`](docs/API-N8N.md).
 
 ## Sécurité
 - Seuls les emails de `ALLOWED_EMAILS` peuvent ouvrir le CRM.
