@@ -133,7 +133,7 @@ Quand quelque chose d'important arrive, le CRM fait un `POST` sur `N8N_NOTIFY_WE
 | `offre.acceptee` | ✅ le client a accepté ton offre |
 | `offre.refusee` | le client a refusé |
 
-→ Dans n8n : **Webhook** → **IF** sur `event` → **Telegram** / push : « 🔥 Boulangerie Martin veut un site — [ouvrir] ».
+→ Facultatif : ce webhook sert seulement si tu veux que n8n fasse quelque chose de plus (ex : t'envoyer un email récap). Les notifications sur ton téléphone seront gérées **directement par le CRM** (notifications push de l'appli installée).
 
 ---
 

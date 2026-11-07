@@ -6,7 +6,7 @@ Mon CRM à moi : **tout ce que fait l'agent de prospection (n8n) et tout ce que 
             ┌────────────── n8n (toute l'automatisation) ──────────────┐
             │  recherche prospects · SMS / emails IA · réponses · RDV  │
             └───────┬───────────────────────────────▲──────────────────┘
-       API (clé)    │                               │ webhook « notifie-moi »
+       API (clé)    │                               │ webhook (facultatif)
                     ▼                               │
    ┌───────────────────────────── CRM (ce projet) ──┴───────────────┐
    │ Accueil · Pipeline · Fiches clients + historique · Offres      │──► 🔔 téléphone
@@ -71,5 +71,5 @@ npm run dev                  # http://localhost:3000
 
 ## Prochaines étapes
 - [x] CRM (ce dépôt)
-- [ ] Workflows n8n 1 → 7 (voir [`n8n/README.md`](n8n/README.md))
+- [ ] Workflows n8n 1 → 6 (voir [`n8n/README.md`](n8n/README.md))
 - [ ] Formulaire + prise de RDV sur le site vitrine

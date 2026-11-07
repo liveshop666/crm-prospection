@@ -10,7 +10,8 @@ export type NotifyEvent =
 
 /**
  * Envoie un événement à n8n (webhook), qui se charge de la notification
- * sur ton téléphone (Telegram, push, etc.). Ne bloque jamais le CRM si n8n est down.
+ * Facultatif : prévient n8n d'un événement important (pour un traitement en plus).
+ * Ne bloque jamais le CRM si n8n est down.
  */
 export async function notifyN8n(event: NotifyEvent, payload: Record<string, unknown>) {
   const url = process.env.N8N_NOTIFY_WEBHOOK_URL;
