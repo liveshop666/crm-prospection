@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { deleteActivity, deleteSiteEvent } from "@/app/actions";
+import { deleteActivity, hideSiteEvent } from "@/app/actions";
 
 /** Petit menu « ⋯ » avec « Supprimer » pour une ligne de journal ou d'historique. */
 export function RowMenu({ id, kind }: { id: string; kind: "site" | "activity" }) {
@@ -22,11 +22,11 @@ export function RowMenu({ id, kind }: { id: string; kind: "site" | "activity" })
   }, [open]);
 
   const remove = () => {
-    if (!confirm("Supprimer cette ligne ?")) return;
+    if (kind === "activity" && !confirm("Supprimer cette ligne de l'historique ?")) return;
     setOpen(false);
     start(async () => {
       try {
-        await (kind === "site" ? deleteSiteEvent(id) : deleteActivity(id));
+        await (kind === "site" ? hideSiteEvent(id) : deleteActivity(id));
         setGone(true);
         router.refresh();
       } catch {
@@ -44,8 +44,14 @@ export function RowMenu({ id, kind }: { id: string; kind: "site" | "activity" })
         {pending ? "…" : <svg viewBox="0 0 24 24" className="size-4" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" /></svg>}
       </button>
       {open && (
-        <div className="absolute right-0 z-20 mt-1 w-36 overflow-hidden rounded-lg border border-border bg-surface py-1 shadow-lg">
-          <button type="button" onClick={remove} className="w-full px-3 py-2 text-left text-sm text-rose-600 hover:bg-bg">🗑️ Supprimer</button>
+        <div className="absolute right-0 z-20 mt-1 w-48 overflow-hidden rounded-lg border border-border bg-surface py-1 shadow-lg">
+          {kind === "site" ? (
+            <button type="button" onClick={remove} className="w-full px-3 py-2 text-left text-sm hover:bg-bg">
+              🗑️ Retirer de la liste<span className="block text-xs text-muted">les chiffres restent</span>
+            </button>
+          ) : (
+            <button type="button" onClick={remove} className="w-full px-3 py-2 text-left text-sm text-rose-600 hover:bg-bg">🗑️ Supprimer</button>
+          )}
         </div>
       )}
     </div>

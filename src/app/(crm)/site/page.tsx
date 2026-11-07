@@ -33,7 +33,9 @@ export default async function SitePage({ searchParams }: { searchParams: Promise
   const [{ data: rows, error }, { data: recentRows }] = await Promise.all([
     supabase.from("site_events").select("type, created_at, visitor").gte("created_at", since30).limit(20000),
     (() => {
-      let q = supabase.from("site_events").select("*").order("created_at", { ascending: false }).limit(100);
+      // les lignes « retirées de la liste » restent comptées dans les chiffres, mais ne s'affichent plus ici
+      let q = supabase.from("site_events").select("*").filter("metadata->>hidden", "is", null)
+        .order("created_at", { ascending: false }).limit(100);
       if (type && LABEL[type]) q = q.eq("type", type);
       return q;
     })(),

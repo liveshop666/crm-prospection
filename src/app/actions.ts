@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { logActivity, pickProspectFields, upsertProspect } from "@/lib/crm";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { Prospect, ProspectStatus } from "@/lib/types";
 
@@ -123,11 +124,18 @@ export async function signOut() {
   redirect("/login");
 }
 
-/** Supprime une ligne du journal du site (page Site). */
-export async function deleteSiteEvent(id: string) {
-  const supabase = await db();
-  const { error } = await supabase.from("site_events").delete().eq("id", id);
+/**
+ * Retire une ligne de la liste « Derniers passages » SANS toucher aux chiffres :
+ * la ligne est seulement marquée comme masquée (metadata.hidden).
+ */
+export async function hideSiteEvent(id: string) {
+  await db(); // vérifie que c'est bien toi qui es connecté
+  const admin = createAdminClient();
+  const { data, error } = await admin.from("site_events").select("metadata").eq("id", id).single();
   if (error) throw error;
+  const { error: e2 } = await admin.from("site_events")
+    .update({ metadata: { ...(data?.metadata ?? {}), hidden: true } }).eq("id", id);
+  if (e2) throw e2;
   revalidatePath("/site");
 }
 
