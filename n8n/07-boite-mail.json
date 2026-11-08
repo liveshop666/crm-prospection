@@ -19,7 +19,7 @@
     },
     {
       "parameters": {
-        "content": "### 🔑 3 connexions à choisir\n1. **Gmail pro** (nœud 1)\n2. **Google Gemini** (nœud 3, gratuit)\n3. **CRM x-api-key** (nœud 5)",
+        "content": "### 🔑 3 connexions\n1. **IMAP OVH** (nœud 1) : `ssl0.ovh.net`, port 993, SSL\n2. **Google Gemini** (nœud 3, gratuit)\n3. **CRM x-api-key** (nœud 5)",
         "height": 200,
         "width": 300,
         "color": 6
@@ -35,41 +35,31 @@
     },
     {
       "parameters": {
-        "pollTimes": {
-          "item": [
-            {
-              "mode": "everyMinute"
-            }
-          ]
-        },
-        "simple": false,
-        "filters": {
-          "labelIds": [
-            "INBOX"
-          ],
-          "readStatus": "both",
-          "q": "-from:me -category:promotions -category:social"
-        },
-        "options": {}
+        "mailbox": "INBOX",
+        "postProcessAction": "nothing",
+        "format": "resolved",
+        "options": {
+          "trackLastMessageId": true
+        }
       },
-      "type": "n8n-nodes-base.gmailTrigger",
-      "typeVersion": 1.4,
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2.2,
       "position": [
         -460,
         40
       ],
       "id": "b64e198a-923b-492f-b5b3-6dcd4c38694e",
-      "name": "1. Nouvel email (Gmail)",
+      "name": "1. Nouvel email (OVH, IMAP)",
       "credentials": {
-        "gmailOAuth2": {
+        "imap": {
           "id": "a-choisir",
-          "name": "Gmail pro"
+          "name": "IMAP OVH"
         }
       }
     },
     {
       "parameters": {
-        "jsCode": "// Prépare chaque email : expéditeur, objet, texte (sans l'historique cité), liens.\nconst out = [];\nfor (const item of $input.all()) {\n  const e = item.json;\n  const from = e.from?.value?.[0] ?? {};\n  const to = e.to?.value?.[0]?.address ?? null;\n  const html = e.html || '';\n  let text = e.text || html.replace(/<style[\\s\\S]*?<\\/style>/gi, '').replace(/<br\\s*\\/?>/gi, '\\n').replace(/<\\/p>/gi, '\\n').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&');\n  text = text.replace(/\\r/g, '').replace(/\\n{3,}/g, '\\n\\n').trim();\n\n  // on coupe l'historique cité (« Le … a écrit : », « On … wrote: », « De : … »)\n  const cut = text.search(/\\n\\s*(Le .{5,120}a écrit\\s*:|On .{5,120}wrote:|-{2,}\\s*Original Message|-{2,}\\s*Message d'origine|De\\s*:.*\\n\\s*(Envoyé|Date)\\s*:)/i);\n  const reply = (cut > 20 ? text.slice(0, cut) : text).trim();\n\n  // liens de l'email (utile pour retrouver la conversation sur Codeur, Fiverr, Malt…)\n  const links = [...new Set([...html.matchAll(/href=[\"'](https?:\\/\\/[^\"'\\s>]+)[\"']/gi)].map((m) => m[1]))]\n    .filter((u) => !/unsubscribe|desinscri|désinscri|optout|tracking-pixel|\\.(png|jpe?g|gif)(\\?|$)/i.test(u))\n    .slice(0, 15);\n\n  const email = {\n    external_id: e.id,\n    thread_id: e.threadId,\n    from_email: (from.address || '').toLowerCase(),\n    from_name: from.name || null,\n    to_email: to,\n    subject: e.subject || '',\n    body: reply.slice(0, 20000),\n    received_at: e.date || new Date().toISOString(),\n  };\n\n  const prompt = `Trie cet email reçu sur l'adresse pro.\n\nRÈGLES\n- \"client\" : une vraie personne ou entreprise qui écrit directement : réponse à un email de prospection, demande de devis, question, client existant.\n- \"plateforme\" : notification d'une plateforme de freelance (Codeur, Fiverr, Malt, ComeUp, 5euros, Upwork, LinkedIn…) qui annonce un NOUVEAU projet, une demande ou un message d'un client. Récupère le nom du client, le projet, le budget et le lien vers la conversation ou le projet (platform_url : le lien du bouton « Voir le message », « Répondre » ou « Voir le projet », choisi dans la liste de liens). Une notification de plateforme sans client (newsletter, paiement reçu, facture, conseil) = \"autre\".\n- \"autre\" : newsletters, factures, banque, réseaux sociaux, Google, confirmations, notifications automatiques. Les notifications du formulaire du site solvelab.fr et de Cal.com sont DÉJÀ dans le CRM : \"autre\".\n- verdict \"spam\" : démarchage de masse (SEO, backlinks, nom de domaine, crypto, « dear sir »), phishing, arnaque, robot. verdict \"a_verifier\" si tu hésites entre vraie demande et spam. Sinon \"ok\".\n- classement (seulement si category = \"client\", sinon null) : \"chaud\" (intéressé, veut un devis, un RDV, pose des questions, nouvelle demande), \"a_relancer\" (pas maintenant, plus tard : mets relance_le), \"pas_interesse\", \"stop\" (demande de ne plus être contacté ou de se désinscrire).\n- N'invente rien : null si l'info n'est pas dans l'email.\n\nRéponds UNIQUEMENT avec ce JSON :\n{\"category\":\"client|plateforme|autre\",\"verdict\":\"ok|a_verifier|spam\",\"source\":\"email|codeur|fiverr|malt|comeup|5euros|upwork|linkedin|autre_plateforme\",\"classement\":\"chaud|a_relancer|pas_interesse|stop|null\",\"relance_le\":\"AAAA-MM-JJ ou null\",\"resume\":\"une phrase courte en français\",\"platform_url\":\"lien ou null\",\"lead\":{\"company_name\":null,\"contact_name\":null,\"email\":null,\"phone\":null,\"city\":null,\"interest\":null,\"budget\":null}}\n\nEMAIL\nDe : ${email.from_name || ''} <${email.from_email}>\nObjet : ${email.subject}\nTexte :\n${reply.slice(0, 6000)}\n\nLiens trouvés :\n${links.join('\\n') || '(aucun)'}`;\n\n  const system = \"Tu tries la boîte mail pro de SolveLab, agence digitale à Caen (sites internet, automatisation et IA, outils sur mesure, pub vidéo). Tu réponds uniquement avec un objet JSON valide, sans aucun texte autour.\";\n  out.push({ json: {\n    email,\n    // Gemini (gratuit) — utilisé par défaut\n    gemini_body: {\n      systemInstruction: { parts: [{ text: system }] },\n      contents: [{ role: 'user', parts: [{ text: prompt }] }],\n      generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 800, temperature: 0 },\n    },\n    // Claude (payant, ~1 €/mois) — pour passer à Claude plus tard, voir docs/MISE-EN-ROUTE.md\n    anthropic_body: {\n      model: 'claude-haiku-5-5',\n      max_tokens: 700,\n      system: \"Tu tries la boîte mail pro de SolveLab, agence digitale à Caen (sites internet, automatisation et IA, outils sur mesure, pub vidéo). Tu réponds uniquement avec un objet JSON valide, sans aucun texte autour.\",\n      messages: [{ role: 'user', content: prompt }],\n    },\n  }, pairedItem: item.pairedItem ?? { item: out.length } });\n}\nreturn out;\n"
+        "jsCode": "// Prépare chaque email reçu (IMAP, OVH) : expéditeur, objet, texte (sans l'historique cité), liens.\nconst out = [];\nfor (const item of $input.all()) {\n  const e = item.json;\n  const from = e.from?.value?.[0] ?? {};\n  const to = e.to?.value?.[0]?.address ?? null;\n  const html = e.html || '';\n  let text = e.text || html.replace(/<style[\\s\\S]*?<\\/style>/gi, '').replace(/<br\\s*\\/?>/gi, '\\n').replace(/<\\/p>/gi, '\\n').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&');\n  text = text.replace(/\\r/g, '').replace(/\\n{3,}/g, '\\n\\n').trim();\n\n  // on coupe l'historique cité (« Le … a écrit : », « On … wrote: », « De : … »)\n  const cut = text.search(/\\n\\s*(Le .{5,120}a écrit\\s*:|On .{5,120}wrote:|-{2,}\\s*Original Message|-{2,}\\s*Message d'origine|De\\s*:.*\\n\\s*(Envoyé|Date)\\s*:)/i);\n  const reply = (cut > 20 ? text.slice(0, cut) : text).trim();\n\n  // liens de l'email (utile pour retrouver la conversation sur Codeur, Fiverr, Malt…)\n  const links = [...new Set([...html.matchAll(/href=[\"'](https?:\\/\\/[^\"'\\s>]+)[\"']/gi)].map((m) => m[1]))]\n    .filter((u) => !/unsubscribe|desinscri|désinscri|optout|tracking-pixel|\\.(png|jpe?g|gif)(\\?|$)/i.test(u))\n    .slice(0, 15);\n\n  // indices anti-arnaque calculés avant l'IA\n  const fromDomain = (from.address || '').split('@')[1]?.toLowerCase() || '';\n  const PLATFORM_DOMAINS = { fiverr: ['fiverr.com'], codeur: ['codeur.com'], malt: ['malt.com', 'malt.fr'], comeup: ['comeup.com'], upwork: ['upwork.com'] };\n  const allText = `${e.subject || ''} ${reply}`.toLowerCase();\n  const alerts = [];\n  for (const [name, domains] of Object.entries(PLATFORM_DOMAINS)) {\n    const official = domains.some((d) => fromDomain === d || fromDomain.endsWith('.' + d));\n    if (allText.includes(name) && !official && /(compte|account|suspend|verify|v[ée]rifi|password|mot de passe|payment|paiement|security|s[ée]curit|login|connexion)/i.test(allText)) {\n      alerts.push(`parle de ${name} mais n'est PAS envoyé par ${domains[0]} (imitation probable)`);\n    }\n  }\n  if (/whats\\s?app|telegram|signal app|skype|wechat|discord|hangouts|\\+\\d{9,}/i.test(allText)) alerts.push('demande de passer sur WhatsApp / Telegram / autre messagerie');\n  if (/crypto|bitcoin|usdt|\\bbtc\\b|wallet|western union|gift ?card|carte cadeau/i.test(allText)) alerts.push('paiement crypto / carte cadeau');\n  if (/docs\\.google|drive\\.google|bit\\.ly|tinyurl|wetransfer|\\.zip\\b|\\.exe\\b|\\.apk\\b/i.test(reply + ' ' + links.join(' '))) alerts.push('lien ou fichier externe à ouvrir');\n  if (/(buy|rent|achet|lou)\\w*.{0,30}(your|votre|ton).{0,20}(account|compte|gig|profil)/i.test(allText)) alerts.push('veut acheter / louer le compte');\n  if (/(i can|i will|je peux|je vais).{0,40}(rank|boost|reviews?|avis|traffic|seo|promote|promouvoir)/i.test(allText)) alerts.push('vend des avis / du référencement / de la promotion');\n\n  // conversation : le tout premier message de la discussion (références de l'email)\n  const refs = Array.isArray(e.references) ? e.references : String(e.references || '').split(/\\s+/).filter(Boolean);\n  const email = {\n    external_id: e.messageId || e.id,\n    thread_id: refs[0] || e.inReplyTo || e.messageId || e.threadId || null,\n    from_email: (from.address || '').toLowerCase(),\n    from_name: from.name || null,\n    to_email: to,\n    subject: e.subject || '',\n    body: reply.slice(0, 20000),\n    received_at: e.date || new Date().toISOString(),\n  };\n\n  const prompt = `Trie cet email reçu sur l'adresse pro.\n\nRÈGLES\n- \"client\" : une vraie personne ou entreprise qui écrit directement : réponse à un email de prospection, demande de devis, question, client existant.\n- \"plateforme\" : notification d'une plateforme de freelance (Codeur, Fiverr, Malt, ComeUp, 5euros, Upwork, LinkedIn…) qui annonce un NOUVEAU projet, une demande ou un message d'un client. Récupère le nom du client, le projet, le budget et le lien vers la conversation ou le projet (platform_url : le lien du bouton « Voir le message », « Répondre » ou « Voir le projet », choisi dans la liste de liens). Une notification de plateforme sans client (newsletter, paiement reçu, facture, conseil) = \"autre\".\n- \"autre\" : newsletters, factures, banque, réseaux sociaux, Google, confirmations, notifications automatiques. Les notifications du formulaire du site solvelab.fr et de Cal.com sont DÉJÀ dans le CRM : \"autre\".\n- verdict \"spam\" : démarchage de masse (SEO, backlinks, nom de domaine, crypto, « dear sir »), phishing, arnaque, robot. verdict \"a_verifier\" si tu hésites entre vraie demande et spam. Sinon \"ok\".\n\nARNAQUES FRÉQUENTES SUR FIVERR ET LES PLATEFORMES (verdict \"spam\") :\n- demande de continuer sur WhatsApp, Telegram, Skype, Discord, par email ou par téléphone (interdit par Fiverr, presque toujours une arnaque) ;\n- paiement en crypto, carte cadeau, virement hors plateforme, chèque à encaisser ;\n- lien Google Docs / Drive / fichier à télécharger « avec le cahier des charges » avant toute discussion ;\n- quelqu'un qui VEND quelque chose à Nolla : avis 5 étoiles, promotion du profil, SEO, trafic, « je peux faire tes commandes », achat ou location du compte ;\n- faux email « Fiverr » ou « Codeur » qui ne vient pas du vrai site (compte suspendu, vérifiez votre identité, paiement bloqué) = phishing ;\n- message vague et copié-collé (« Hello dear, I have a project for you, are you available? ») sans aucun détail sur le projet.\nUNE VRAIE DEMANDE (\"ok\") : décrit un projet précis lié aux services de SolveLab (site internet, automatisation / IA, outil sur mesure, pub vidéo), pose des questions sur le prix, le délai ou le contenu, et reste sur la plateforme. Un vrai message de Fiverr vient de @fiverr.com.\nSi le message est trop court pour juger (la notification ne montre qu'un extrait) : \"a_verifier\".\nLes indices calculés automatiquement comptent beaucoup : un seul indice grave (imitation, crypto, WhatsApp/Telegram) suffit pour \"spam\".\n- classement (seulement si category = \"client\", sinon null) : \"chaud\" (intéressé, veut un devis, un RDV, pose des questions, nouvelle demande), \"a_relancer\" (pas maintenant, plus tard : mets relance_le), \"pas_interesse\", \"stop\" (demande de ne plus être contacté ou de se désinscrire).\n- N'invente rien : null si l'info n'est pas dans l'email.\n\nRéponds UNIQUEMENT avec ce JSON :\n{\"category\":\"client|plateforme|autre\",\"verdict\":\"ok|a_verifier|spam\",\"source\":\"email|codeur|fiverr|malt|comeup|5euros|upwork|linkedin|autre_plateforme\",\"classement\":\"chaud|a_relancer|pas_interesse|stop|null\",\"relance_le\":\"AAAA-MM-JJ ou null\",\"resume\":\"une phrase courte en français\",\"platform_url\":\"lien ou null\",\"lead\":{\"company_name\":null,\"contact_name\":null,\"email\":null,\"phone\":null,\"city\":null,\"interest\":null,\"budget\":null}}\n\nINDICES CALCULÉS AUTOMATIQUEMENT : ${alerts.length ? alerts.join(' ; ') : 'aucun'}\n\nEMAIL\nDe : ${email.from_name || ''} <${email.from_email}>\nObjet : ${email.subject}\nTexte :\n${reply.slice(0, 6000)}\n\nLiens trouvés :\n${links.join('\\n') || '(aucun)'}`;\n\n  const system = \"Tu tries la boîte mail pro de SolveLab, agence digitale à Caen (sites internet, automatisation et IA, outils sur mesure, pub vidéo). Tu réponds uniquement avec un objet JSON valide, sans aucun texte autour.\";\n  out.push({ json: {\n    email,\n    // Gemini (gratuit) — utilisé par défaut\n    gemini_body: {\n      systemInstruction: { parts: [{ text: system }] },\n      contents: [{ role: 'user', parts: [{ text: prompt }] }],\n      generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 800, temperature: 0 },\n    },\n    // Claude (payant, ~1 €/mois) — pour passer à Claude plus tard, voir docs/MISE-EN-ROUTE.md\n    anthropic_body: {\n      model: 'claude-haiku-5-5',\n      max_tokens: 700,\n      system: \"Tu tries la boîte mail pro de SolveLab, agence digitale à Caen (sites internet, automatisation et IA, outils sur mesure, pub vidéo). Tu réponds uniquement avec un objet JSON valide, sans aucun texte autour.\",\n      messages: [{ role: 'user', content: prompt }],\n    },\n  }, pairedItem: item.pairedItem ?? { item: out.length } });\n}\nreturn out;\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -83,7 +73,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "googlePalmApi",
         "sendBody": true,
@@ -108,8 +98,9 @@
         }
       },
       "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 5000
+      "maxTries": 5,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -155,17 +146,6 @@
     }
   ],
   "connections": {
-    "1. Nouvel email (Gmail)": {
-      "main": [
-        [
-          {
-            "node": "Préparer l'email",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Préparer l'email": {
       "main": [
         [
@@ -193,6 +173,17 @@
         [
           {
             "node": "Lire le tri de l'IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1. Nouvel email (OVH, IMAP)": {
+      "main": [
+        [
+          {
+            "node": "Préparer l'email",
             "type": "main",
             "index": 0
           }

@@ -1,9 +1,9 @@
 {
-  "name": "08 – Envoi depuis le CRM (Gmail pro)",
+  "name": "08 – Envoi depuis le CRM (OVH)",
   "nodes": [
     {
       "parameters": {
-        "content": "## 📤 08 – Envoi depuis le CRM\n\nQuand tu cliques **Envoyer** dans le CRM (page Messages ou fiche), le CRM appelle ce webhook et l'email part **depuis ton Gmail pro**. Si c'est une réponse, elle part dans la même conversation.\n\nUne fois activé : copie la **Production URL** du nœud 1 dans Vercel → variable `N8N_MAIL_WEBHOOK_URL`.\n\nFilet de sécurité : du lundi au vendredi, toutes les heures, il renvoie les emails restés en attente.",
+        "content": "## 📤 08 – Envoi depuis le CRM\n\nQuand tu cliques **Envoyer** dans le CRM, le CRM appelle ce webhook et l'email part de **contact@solvelab.fr** (SMTP).\n\nProduction URL du nœud 1 → Vercel, variable `N8N_MAIL_WEBHOOK_URL`.\n\nFilet de sécurité : lun-ven, toutes les heures, il renvoie les emails restés en attente.",
         "height": 360,
         "width": 460,
         "color": 4
@@ -19,7 +19,7 @@
     },
     {
       "parameters": {
-        "content": "### 🔑 Connexions\n- **CRM x-api-key** : nœuds 1, 2, et les deux « CRM »\n- **Gmail pro** : les deux nœuds Gmail",
+        "content": "### 🔑 Connexions\n- **CRM x-api-key** : nœuds 1, 2 et les deux « CRM »\n- **SMTP** : nœud « Envoyer »",
         "height": 170,
         "width": 320,
         "color": 6
@@ -101,7 +101,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Ordre reçu du CRM : on garde seulement ce qui sert à l'envoi.\nconst b = $json.body ?? {};\nif (b.action !== 'envoyer_email') return [];\nreturn [{ json: {\n  message_id: b.message_id, to: b.to, subject: b.subject || '(sans objet)', body: b.body || '',\n  reply_to_external_id: b.reply_to_external_id || null,\n} }];\n"
+        "jsCode": "// Ordre reçu du CRM : on garde seulement ce qui sert à l'envoi.\nconst b = $json.body ?? {};\nif (b.action !== 'envoyer_email') return [];\nreturn [{ json: {\n  message_id: b.message_id, to: b.to, subject: b.subject || '(sans objet)', body: b.body || '',\n  thread_id: b.thread_id || null,\n} }];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -114,7 +114,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Filet de sécurité : emails écrits dans le CRM depuis plus de 10 min et pas encore partis.\nconst limit = Date.now() - 10 * 60 * 1000;\nreturn ($json.messages ?? [])\n  .filter((m) => m.direction === 'sortant' && new Date(m.created_at).getTime() < limit)\n  .map((m) => ({ json: {\n    message_id: m.id, to: m.to_email, subject: m.subject || '(sans objet)', body: m.body || '',\n    reply_to_external_id: m.metadata?.reply_to_external_id || null,\n  } }));\n"
+        "jsCode": "// Filet de sécurité : emails écrits dans le CRM depuis plus de 10 min et pas encore partis.\nconst limit = Date.now() - 10 * 60 * 1000;\nreturn ($json.messages ?? [])\n  .filter((m) => m.direction === 'sortant' && new Date(m.created_at).getTime() < limit)\n  .map((m) => ({ json: {\n    message_id: m.id, to: m.to_email, subject: m.subject || '(sans objet)', body: m.body || '',\n    thread_id: m.thread_id || null,\n  } }));\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -141,104 +141,13 @@
     },
     {
       "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "loose",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "9e56f17b-c2dc-4556-bfee-213b0217d469",
-              "leftValue": "={{ $json.reply_to_external_id }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "notEmpty",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "looseTypeValidation": true,
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        360,
-        100
-      ],
-      "id": "2a8010a4-312f-46eb-97d8-e2a20897368a",
-      "name": "C'est une réponse ?"
-    },
-    {
-      "parameters": {
-        "resource": "message",
-        "operation": "reply",
-        "messageId": "={{ $json.reply_to_external_id }}",
-        "emailType": "text",
-        "message": "={{ $json.body }}",
-        "options": {
-          "appendAttribution": false,
-          "replyToSenderOnly": true
-        }
-      },
-      "type": "n8n-nodes-base.gmail",
-      "typeVersion": 2.1,
-      "position": [
-        600,
-        0
-      ],
-      "id": "d026a74d-1a71-4bf8-b8d0-ddc9c522638c",
-      "name": "Gmail : répondre",
-      "credentials": {
-        "gmailOAuth2": {
-          "id": "a-choisir",
-          "name": "Gmail pro"
-        }
-      },
-      "onError": "continueErrorOutput"
-    },
-    {
-      "parameters": {
-        "resource": "message",
-        "operation": "send",
-        "sendTo": "={{ $json.to }}",
-        "subject": "={{ $json.subject }}",
-        "emailType": "text",
-        "message": "={{ $json.body }}",
-        "options": {
-          "appendAttribution": false
-        }
-      },
-      "type": "n8n-nodes-base.gmail",
-      "typeVersion": 2.1,
-      "position": [
-        600,
-        220
-      ],
-      "id": "c7f44aed-ef58-4d33-9104-08e30054f892",
-      "name": "Gmail : nouvel email",
-      "credentials": {
-        "gmailOAuth2": {
-          "id": "a-choisir",
-          "name": "Gmail pro"
-        }
-      },
-      "onError": "continueErrorOutput"
-    },
-    {
-      "parameters": {
         "method": "PATCH",
         "url": "=https://crm-prospection-eight.vercel.app/api/n8n/messages/{{ $('Email à envoyer').item.json.message_id }}",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ send_status: 'envoye', external_id: $json.id, thread_id: $json.threadId }) }}",
+        "jsonBody": "={{ JSON.stringify({ send_status: 'envoye', external_id: $json.messageId, thread_id: $('Email à envoyer').item.json.thread_id || $json.messageId }) }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -287,6 +196,35 @@
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "send",
+        "fromEmail": "Nolla – SolveLab <contact@solvelab.fr>",
+        "toEmail": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "text",
+        "text": "={{ $json.body }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1000,
+        120
+      ],
+      "id": "6640adfb-4e60-40a9-8b9e-83fb22201982",
+      "name": "Envoyer (OVH, SMTP)",
+      "credentials": {
+        "smtp": {
+          "id": "a-choisir",
+          "name": "SMTP"
+        }
+      },
+      "onError": "continueErrorOutput"
     }
   ],
   "connections": {
@@ -349,50 +287,14 @@
       "main": [
         [
           {
-            "node": "C'est une réponse ?",
+            "node": "Envoyer (OVH, SMTP)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "C'est une réponse ?": {
-      "main": [
-        [
-          {
-            "node": "Gmail : répondre",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Gmail : nouvel email",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Gmail : répondre": {
-      "main": [
-        [
-          {
-            "node": "CRM : envoyé ✓",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "CRM : erreur",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Gmail : nouvel email": {
+    "Envoyer (OVH, SMTP)": {
       "main": [
         [
           {

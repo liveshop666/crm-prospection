@@ -1,6 +1,6 @@
 # CRM SolveLab
 
-Mon CRM à moi, mon **seul espace de travail** : l'agent de prospection, ma boîte mail pro, les demandes de Codeur / Fiverr / Malt, le site solvelab.fr, les offres, les ventes, les suivis mensuels et le chiffre d'affaires. Plus besoin d'ouvrir Gmail ou les plateformes pour savoir où en est un client.
+Mon CRM à moi, mon **seul espace de travail** : l'agent de prospection, ma boîte mail pro, les demandes de Codeur / Fiverr / Malt, le site solvelab.fr, les offres, les ventes, les suivis mensuels et le chiffre d'affaires. Plus besoin d'ouvrir la boîte mail ou les plateformes pour savoir où en est un client.
 
 En ligne : https://crm-prospection-eight.vercel.app · Site relié : https://www.solvelab.fr (dépôt `liveshop666/Solvelab`)
 
@@ -18,7 +18,7 @@ En ligne : https://crm-prospection-eight.vercel.app · Site relié : https://www
         │ (clic email)  │ visites du site   │ (RDV pris/annulé)│ (« J'accepte »)
      le prospect      solvelab.fr        cal.com/solvelab     le client  │
                                                                          │
-             Gmail pro (+ notifications Codeur, Fiverr, Malt…) ⇄ n8n 07/08 ┘
+   contact@solvelab.fr OVH (+ notifications Codeur, Fiverr, Malt…) ⇄ n8n 07/08 ┘
 ```
 
 ## Le parcours d'un client
@@ -37,7 +37,7 @@ S'il répond **STOP**, il est marqué ⛔ et l'agent ne le recontacte plus jamai
 | Page | Contenu |
 |---|---|
 | `/` Accueil | chiffres du jour, « Nouveau à voir », clients chauds, activité récente (menu ⋯ pour supprimer) |
-| `/messages` | **ta boîte mail pro** triée par l'IA : Boîte de réception · Plateformes · À vérifier · Autres · Envoyés · Spam. Lire, répondre, écrire (part de ton Gmail via n8n). Bouton « Répondre sur Fiverr / Codeur… » |
+| `/messages` | **ta boîte mail pro** triée par l'IA : Boîte de réception · Plateformes · À vérifier · Autres · Envoyés · Spam. Lire, répondre, écrire (part de contact@solvelab.fr via n8n). Bouton « Répondre sur Fiverr / Codeur… » |
 | `/agent` | **ordres à l'agent** (recherche, premiers emails, relances, consigne libre), pause, réglages (métiers, villes, limite/jour, signature), suivi des ordres |
 | `/clients` | clients signés, ce qui leur a été vendu, payé / reste à encaisser, suivis mensuels |
 | `/chiffre` | chiffre d'affaires par mois (prestations + suivis), encaissé, revenu mensuel, par type de prestation et par origine du client |
