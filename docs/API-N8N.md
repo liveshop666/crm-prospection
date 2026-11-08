@@ -117,8 +117,8 @@ Un `email_entrant` (ou `sms_entrant`) qui commence par « STOP » / « désinscr
 
 ```json
 {
-  "external_id": "18c2f…",            // id du message Gmail
-  "thread_id": "18c2e…",              // id de la conversation Gmail
+  "external_id": "18c2f…",            // Message-ID de l'email
+  "thread_id": "18c2e…",              // premier Message-ID de la conversation
   "from_email": "paul@boulangerie-martin.fr",
   "from_name": "Paul Martin",
   "to_email": "contact@solvelab.fr",
@@ -149,7 +149,7 @@ Ce que fait le CRM :
 
 Réponse : `{ ok, duplicate, message_id, verdict, category, prospect_id, prospect_created }`
 
-## 7. Emails écrits dans le CRM → Gmail (workflow `08-envoi-depuis-crm`)
+## 7. Emails écrits dans le CRM → envoi SMTP (workflow `08-envoi-depuis-crm`)
 
 Quand tu cliques **Envoyer** dans le CRM, le CRM appelle le webhook `N8N_MAIL_WEBHOOK_URL` avec le header `x-api-key: CRM_API_KEY` :
 
@@ -160,7 +160,7 @@ Quand tu cliques **Envoyer** dans le CRM, le CRM appelle le webhook `N8N_MAIL_WE
 
 n8n envoie (en réponse dans la conversation si `reply_to_external_id` est rempli), puis confirme :
 
-`PATCH /api/n8n/messages/:message_id` → `{ "send_status": "envoye", "external_id": "id Gmail", "thread_id": "…" }` ou `{ "send_status": "erreur", "error": "…" }`.
+`PATCH /api/n8n/messages/:message_id` → `{ "send_status": "envoye", "external_id": "Message-ID envoyé", "thread_id": "…" }` ou `{ "send_status": "erreur", "error": "…" }`.
 Quand c'est envoyé, le CRM l'ajoute à l'historique de la fiche (type `email_sortant`, par « moi »).
 
 Filet de sécurité : `GET /api/n8n/messages?send_status=a_envoyer&direction=sortant` liste les emails restés en attente.
