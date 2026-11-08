@@ -14,7 +14,7 @@ Le CRM est ton seul espace de travail. n8n travaille en coulisses : il trouve de
 | 4 | `04-relances` | tous les jours 10h | `GET prospects?due_followup=true` → relance douce → `POST activities` (relance) | compte de l'agent | à faire |
 | 5 | ~~`05-rdv`~~ | — | **plus besoin** : Cal.com est branché directement sur le CRM | — | ✅ fait |
 | 6 | `06-recap-quotidien` | — | **plus besoin** : tout se voit sur l'accueil et la page Agent du CRM | — | facultatif |
-| 7 | [`07-boite-mail.json`](07-boite-mail.json) | chaque nouvel email (Gmail) | IA : vrai client / plateforme (Codeur, Fiverr, Malt…) / autre / spam → `POST /api/n8n/messages` | ton compte | ✅ prêt à importer |
+| 7 | [`07-boite-mail.json`](07-boite-mail.json) | chaque nouvel email (Gmail) | IA gratuite (Gemini) : vrai client / plateforme (Codeur, Fiverr, Malt…) / autre / spam → `POST /api/n8n/messages` | ton compte | ✅ prêt à importer |
 | 8 | [`08-envoi-depuis-crm.json`](08-envoi-depuis-crm.json) | webhook appelé par le CRM | les emails que tu écris dans le CRM partent de ton Gmail pro → `PATCH /api/n8n/messages/:id` | ton compte | ✅ prêt à importer |
 
 Guide pas à pas (écran par écran) : [`../docs/MISE-EN-ROUTE.md`](../docs/MISE-EN-ROUTE.md)

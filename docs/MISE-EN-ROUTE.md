@@ -2,7 +2,7 @@
 
 Ce guide branche les nouveautés du CRM : **📬 Messages** (ta boîte mail pro + Codeur, Fiverr, Malt…), **🤖 Agent**, **🤝 Clients & suivis** et **💶 Chiffre d'affaires**.
 
-Ordre : **1. Supabase** → **2. Mettre en ligne** → **3. n8n** → **4. Vercel** → **5. Plateformes** → **6. Tester**.
+Tout est gratuit. Ordre : **1. Supabase** → **2. Mettre en ligne** → **3. n8n** → **4. Vercel** → **5. Plateformes** → **6. Tester**.
 
 Ne colle jamais une clé dans une discussion : elles vont seulement dans Supabase, Vercel ou n8n.
 
@@ -30,10 +30,9 @@ Rien n'est effacé : on ajoute seulement des tables. Tu peux le relancer sans ri
 
 ## 3. n8n : brancher ta boîte mail (15 min)
 
-### 3.1 Créer ta clé Claude (l'IA qui trie les emails, ≈ 1 €/mois)
-1. Va sur **console.anthropic.com** → crée un compte (ou connecte-toi).
-2. Menu **Billing** (Facturation) → **Add credits** → mets **5 €** (ça dure plusieurs mois).
-3. Menu **API Keys** → **Create Key** → nom : `n8n` → **Create** → 📋 copie la clé (elle commence par `sk-ant-`). Elle ne s'affichera plus : colle-la directement à l'étape 3.2.
+### 3.1 L'IA qui trie les emails : Gemini (gratuit)
+Le workflow 07 utilise **Google Gemini**, gratuit, avec la connexion « Google Gemini(PaLM) Api account » déjà présente dans ton n8n. Rien à payer.
+Pour passer plus tard à Claude (≈ 1 €/mois) : dans le nœud 3, remplace l'adresse par `https://api.anthropic.com/v1/messages`, la connexion par **Anthropic**, ajoute l'en-tête `anthropic-version: 2023-06-01` et mets le corps `{{ JSON.stringify($json.anthropic_body) }}`.
 
 ### 3.2 Créer les 3 connexions dans n8n
 Dans n8n : menu de gauche → **Overview** (ou **Home**) → onglet **Credentials** → bouton **Create credential** (ou la flèche à côté de *Create workflow*).
@@ -41,7 +40,6 @@ Dans n8n : menu de gauche → **Overview** (ou **Home**) → onglet **Credential
 | Connexion | Cherche | Remplis | Nom à donner |
 |---|---|---|---|
 | CRM | `Header Auth` | **Name** : `x-api-key` · **Value** : ta `CRM_API_KEY` (dans Vercel → Settings → Environment Variables) | `CRM x-api-key` |
-| Claude | `Anthropic` | **API Key** : la clé `sk-ant-…` | `Claude` |
 | Gmail | `Gmail OAuth2` | clique **Sign in with Google** → choisis ton adresse pro → **Autoriser** | `Gmail pro` |
 
 Pour chaque connexion : **Save**. La pastille verte « Connection tested successfully » doit apparaître (sauf pour Header Auth, qui n'a pas de test : c'est normal).
@@ -51,7 +49,7 @@ Pour chaque connexion : **Save**. La pastille verte « Connection tested success
 2. Dans n8n : **Create workflow** → en haut à droite **⋯** → **Import from File…** → choisis le fichier.
 3. Ouvre les nœuds marqués d'un ⚠️ un par un et choisis la bonne connexion :
    - **1. Nouvel email (Gmail)** → `Gmail pro`
-   - **3. IA : trier l'email** → `Claude`
+   - **3. IA (Gemini, gratuit) : trier l'email** → `Google Gemini(PaLM) Api account` (déjà choisi)
    - **5. Envoyer au CRM** → `CRM x-api-key`
 4. **Save** (en haut à droite) → interrupteur **Inactive → Active**.
 
