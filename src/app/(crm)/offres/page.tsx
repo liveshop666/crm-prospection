@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Empty, PageHeader, Stat } from "@/components/ui";
-import { OFFER_STATUS } from "@/lib/constants";
+import { OFFER_STATUS, PAYMENT_STATUS, serviceLabel } from "@/lib/constants";
 import { date, euro } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import type { Offer } from "@/lib/types";
@@ -24,9 +24,9 @@ export default async function OffersPage() {
           <Link key={o.id} href={`/prospects/${o.prospect_id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-soft">
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-medium">{o.title}</div>
-              <div className="truncate text-xs text-muted">{o.prospects?.company_name} · {date(o.created_at)}</div>
+              <div className="truncate text-xs text-muted">{o.prospects?.company_name} · {serviceLabel(o.service_type)} · {date(o.created_at)}{o.monthly_cents > 0 && ` · + ${euro(o.monthly_cents)}/mois`}</div>
             </div>
-            <span className="text-xs text-muted">{OFFER_STATUS[o.status]}</span>
+            <span className="text-right text-xs text-muted">{OFFER_STATUS[o.status]}{o.status === "acceptee" && <><br />{PAYMENT_STATUS[o.payment_status ?? "non_paye"]}</>}</span>
             <span className="w-24 text-right text-sm font-semibold tabular-nums">{euro(o.amount_cents)}</span>
           </Link>
         ))}

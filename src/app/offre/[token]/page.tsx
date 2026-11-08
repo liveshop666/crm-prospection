@@ -3,6 +3,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { logActivity } from "@/lib/crm";
+import { createSubscriptionFromOffer } from "@/lib/sales";
 import { date, euro } from "@/lib/format";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Offer, Prospect } from "@/lib/types";
@@ -25,6 +26,7 @@ async function answer(token: string, accepted: boolean) {
   if (!offer || !["envoyee", "brouillon"].includes(offer.status)) return;
   const db = createAdminClient();
   await db.from("offers").update({ status: accepted ? "acceptee" : "refusee", answered_at: new Date().toISOString() }).eq("id", offer.id);
+  if (accepted) await createSubscriptionFromOffer(db, offer); // le suivi mensuel démarre tout seul
   await logActivity(db, {
     prospect: offer.prospects, type: accepted ? "offre_acceptee" : "offre_refusee",
     content: `${offer.title} — ${euro(offer.amount_cents)}`, metadata: { offer_id: offer.id, amount_cents: offer.amount_cents },
@@ -49,6 +51,12 @@ export default async function PublicOffer({ params }: { params: Promise<{ token:
           <span className="text-sm text-muted">Montant</span>
           <span className="text-2xl font-semibold tabular-nums">{euro(offer.amount_cents)}</span>
         </div>
+        {offer.monthly_cents > 0 && (
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="text-sm text-muted">Suivi mensuel (maintenance, mises à jour, assistance)</span>
+            <span className="font-semibold tabular-nums">{euro(offer.monthly_cents)} / mois</span>
+          </div>
+        )}
 
         {offer.status === "acceptee" ? (
           <p className="mt-6 rounded-lg bg-emerald-50 p-4 text-center text-sm font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
