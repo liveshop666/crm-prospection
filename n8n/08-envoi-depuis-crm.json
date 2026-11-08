@@ -1,0 +1,419 @@
+{
+  "name": "08 – Envoi depuis le CRM (Gmail pro)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 📤 08 – Envoi depuis le CRM\n\nQuand tu cliques **Envoyer** dans le CRM (page Messages ou fiche), le CRM appelle ce webhook et l'email part **depuis ton Gmail pro**. Si c'est une réponse, elle part dans la même conversation.\n\nUne fois activé : copie la **Production URL** du nœud 1 dans Vercel → variable `N8N_MAIL_WEBHOOK_URL`.\n\nFilet de sécurité : du lundi au vendredi, toutes les heures, il renvoie les emails restés en attente.",
+        "height": 360,
+        "width": 460,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -520,
+        -420
+      ],
+      "id": "97534dff-3419-43b7-ba0c-b19db9bc5653",
+      "name": "Note -520--420"
+    },
+    {
+      "parameters": {
+        "content": "### 🔑 Connexions\n- **CRM x-api-key** : nœuds 1, 2, et les deux « CRM »\n- **Gmail pro** : les deux nœuds Gmail",
+        "height": 170,
+        "width": 320,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        440,
+        -420
+      ],
+      "id": "2bfc2dc2-877b-480c-81b1-4600adbeb925",
+      "name": "Note 440--420"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "crm-envoi-email",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        -520,
+        0
+      ],
+      "id": "456c2ceb-f1a7-4fae-b33d-ca360dc80487",
+      "name": "1. Ordre du CRM (webhook)",
+      "webhookId": "597f4705-49a4-4403-ab67-9cf02596fe8d",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "a-choisir",
+          "name": "CRM x-api-key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8-19 * * 1-5"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -520,
+        220
+      ],
+      "id": "86352831-5fca-4ce1-bc0a-e78ef8f4b079",
+      "name": "Toutes les heures (lun-ven)"
+    },
+    {
+      "parameters": {
+        "url": "https://crm-prospection-eight.vercel.app/api/n8n/messages?send_status=a_envoyer&direction=sortant&limit=20",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -300,
+        220
+      ],
+      "id": "d736c941-4b05-44a4-8c3f-8f07943d9a27",
+      "name": "2. Emails en attente (CRM)",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "a-choisir",
+          "name": "CRM x-api-key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Ordre reçu du CRM : on garde seulement ce qui sert à l'envoi.\nconst b = $json.body ?? {};\nif (b.action !== 'envoyer_email') return [];\nreturn [{ json: {\n  message_id: b.message_id, to: b.to, subject: b.subject || '(sans objet)', body: b.body || '',\n  reply_to_external_id: b.reply_to_external_id || null,\n} }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -300,
+        0
+      ],
+      "id": "1130e67e-1b2c-42a6-aaf0-f4e7880eecff",
+      "name": "Lire l'ordre"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filet de sécurité : emails écrits dans le CRM depuis plus de 10 min et pas encore partis.\nconst limit = Date.now() - 10 * 60 * 1000;\nreturn ($json.messages ?? [])\n  .filter((m) => m.direction === 'sortant' && new Date(m.created_at).getTime() < limit)\n  .map((m) => ({ json: {\n    message_id: m.id, to: m.to_email, subject: m.subject || '(sans objet)', body: m.body || '',\n    reply_to_external_id: m.metadata?.reply_to_external_id || null,\n  } }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        220
+      ],
+      "id": "63756d74-02e5-40c7-83e9-ba6a7f8c4f18",
+      "name": "Garder les oubliés"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return { json: $json };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        140,
+        100
+      ],
+      "id": "76852b4a-96f6-441d-8199-c4fc12a35f5b",
+      "name": "Email à envoyer"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "9e56f17b-c2dc-4556-bfee-213b0217d469",
+              "leftValue": "={{ $json.reply_to_external_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        360,
+        100
+      ],
+      "id": "2a8010a4-312f-46eb-97d8-e2a20897368a",
+      "name": "C'est une réponse ?"
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "reply",
+        "messageId": "={{ $json.reply_to_external_id }}",
+        "emailType": "text",
+        "message": "={{ $json.body }}",
+        "options": {
+          "appendAttribution": false,
+          "replyToSenderOnly": true
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        600,
+        0
+      ],
+      "id": "d026a74d-1a71-4bf8-b8d0-ddc9c522638c",
+      "name": "Gmail : répondre",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "a-choisir",
+          "name": "Gmail pro"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "text",
+        "message": "={{ $json.body }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        600,
+        220
+      ],
+      "id": "c7f44aed-ef58-4d33-9104-08e30054f892",
+      "name": "Gmail : nouvel email",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "a-choisir",
+          "name": "Gmail pro"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://crm-prospection-eight.vercel.app/api/n8n/messages/{{ $('Email à envoyer').item.json.message_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ send_status: 'envoye', external_id: $json.id, thread_id: $json.threadId }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        860,
+        40
+      ],
+      "id": "a2cc09b3-91f2-494e-83a9-62bc1e102f50",
+      "name": "CRM : envoyé ✓",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "a-choisir",
+          "name": "CRM x-api-key"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://crm-prospection-eight.vercel.app/api/n8n/messages/{{ $('Email à envoyer').item.json.message_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ send_status: 'erreur', error: String($json.error?.message ?? $json.error ?? 'Envoi Gmail impossible') }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        860,
+        260
+      ],
+      "id": "1705f7e1-260d-436d-bd27-eb4518419188",
+      "name": "CRM : erreur",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "a-choisir",
+          "name": "CRM x-api-key"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    }
+  ],
+  "connections": {
+    "1. Ordre du CRM (webhook)": {
+      "main": [
+        [
+          {
+            "node": "Lire l'ordre",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Toutes les heures (lun-ven)": {
+      "main": [
+        [
+          {
+            "node": "2. Emails en attente (CRM)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2. Emails en attente (CRM)": {
+      "main": [
+        [
+          {
+            "node": "Garder les oubliés",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lire l'ordre": {
+      "main": [
+        [
+          {
+            "node": "Email à envoyer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Garder les oubliés": {
+      "main": [
+        [
+          {
+            "node": "Email à envoyer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email à envoyer": {
+      "main": [
+        [
+          {
+            "node": "C'est une réponse ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "C'est une réponse ?": {
+      "main": [
+        [
+          {
+            "node": "Gmail : répondre",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gmail : nouvel email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail : répondre": {
+      "main": [
+        [
+          {
+            "node": "CRM : envoyé ✓",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "CRM : erreur",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail : nouvel email": {
+      "main": [
+        [
+          {
+            "node": "CRM : envoyé ✓",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "CRM : erreur",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Paris"
+  },
+  "pinData": {}
+}

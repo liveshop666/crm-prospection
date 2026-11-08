@@ -89,10 +89,14 @@ export async function deleteProspect(id: string) {
 
 export async function createOffer(prospectId: string, fd: FormData) {
   const supabase = await db();
-  const amount = Math.round(parseFloat(String(fd.get("amount") ?? "0").replace(",", ".").replace(/\s/g, "")) * 100) || 0;
+  const toCents = (v: FormDataEntryValue | null) => Math.max(0, Math.round(parseFloat(String(v ?? "0").replace(",", ".").replace(/\s/g, "")) * 100) || 0);
+  const amount = toCents(fd.get("amount"));
+  const monthly = toCents(fd.get("monthly"));
   const { error } = await supabase.from("offers").insert({
     prospect_id: prospectId, title: String(fd.get("title") ?? "Offre").trim(),
     description: String(fd.get("description") ?? "").trim() || null, amount_cents: amount,
+    ...(fd.get("service_type") ? { service_type: String(fd.get("service_type")) } : {}),
+    ...(monthly ? { monthly_cents: monthly } : {}),
   });
   if (error) throw error;
   revalidatePath(`/prospects/${prospectId}`);

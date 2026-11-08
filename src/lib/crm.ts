@@ -72,6 +72,7 @@ const AUTO_STATUS: Partial<Record<ActivityType, ProspectStatus>> = {
   rdv: "rdv",
   offre_envoyee: "offre_envoyee",
   offre_acceptee: "valide",
+  demande_plateforme: "chaud",
 };
 
 export interface LogActivityInput {
@@ -101,14 +102,14 @@ export async function logActivity(db: SupabaseClient, input: LogActivityInput) {
   if (error) throw error;
 
   const patch: Record<string, unknown> = { ...(input.prospectPatch ? pickProspectFields(input.prospectPatch) : {}) };
-  const isInbound = ["sms_entrant", "email_entrant", "formulaire", "rdv", "clic_lien", "offre_acceptee", "offre_refusee"].includes(type);
+  const isInbound = ["sms_entrant", "email_entrant", "formulaire", "rdv", "clic_lien", "offre_acceptee", "offre_refusee", "demande_plateforme"].includes(type);
   const isOutbound = ["sms_sortant", "email_sortant", "relance", "offre_envoyee"].includes(type);
 
   if (isOutbound) patch.last_contact_at = new Date().toISOString();
   if (isInbound && by !== "moi") patch.is_unread = true;
 
   // STOP : on coupe tout, définitivement
-  const isStop = type === "stop" || (type === "sms_entrant" && STOP_RE.test(input.content ?? ""));
+  const isStop = type === "stop" || (["sms_entrant", "email_entrant"].includes(type) && STOP_RE.test(input.content ?? ""));
   let newStatus: ProspectStatus | undefined = input.status;
   if (isStop) {
     patch.opted_out = true;
@@ -120,7 +121,7 @@ export async function logActivity(db: SupabaseClient, input: LogActivityInput) {
   } else if (!newStatus && AUTO_STATUS[type]) {
     const auto = AUTO_STATUS[type]!;
     // un événement automatique ne fait jamais reculer (sauf depuis "perdu" vers une vraie demande)
-    if (STATUS_RANK[auto] > STATUS_RANK[prospect.status] || (prospect.status === "perdu" && ["formulaire", "rdv", "offre_acceptee"].includes(type))) {
+    if (STATUS_RANK[auto] > STATUS_RANK[prospect.status] || (prospect.status === "perdu" && ["formulaire", "rdv", "offre_acceptee", "demande_plateforme"].includes(type))) {
       newStatus = auto;
     }
   }

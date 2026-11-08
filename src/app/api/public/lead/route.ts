@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { corsHeaders } from "@/lib/api";
 import { findProspect, logActivity, upsertProspect } from "@/lib/crm";
+import { ingestMessage } from "@/lib/messages";
+import { isSuspicious, spamReasons } from "@/lib/spam";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /** Redirection après envoi du formulaire : uniquement vers ton propre site (pas de redirection ouverte). */
@@ -40,6 +42,33 @@ export async function POST(req: NextRequest) {
     const clip = (s?: string, n = 2000) => (s ?? "").toString().slice(0, n).trim() || null;
 
     const db = createAdminClient();
+    const lines = [
+      b.interest && `Besoin : ${clip(b.interest, 200)}`,
+      b.budget && `Budget : ${clip(b.budget, 100)}`,
+      b.message && clip(b.message),
+    ].filter(Boolean);
+
+    // Filtre anti-spam : une demande douteuse ne crée pas de fiche, elle part dans Messages → « À vérifier »
+    const reasons = spamReasons({ name: b.name, company: b.company, email: b.email, message: b.message });
+    let filed = false;
+    if (isSuspicious(reasons)) try {
+      await ingestMessage(db, {
+        source: "site", category: "client", verdict: "a_verifier",
+        from_email: clip(b.email, 200), from_name: clip(b.name, 200) ?? clip(b.company, 200),
+        subject: "Demande via le formulaire du site", body: lines.join("\n") || "Demande de contact",
+        ai_summary: `Filtre anti-spam : ${reasons.join(", ")}`,
+        lead: { company_name: clip(b.company, 200), contact_name: clip(b.name, 200), email: clip(b.email, 200), phone: clip(b.phone, 30), interest: clip(b.interest, 200), budget: clip(b.budget, 100) },
+        metadata: { page: req.headers.get("referer"), spam_reasons: reasons },
+      });
+      filed = true;
+    } catch (e) {
+      console.error("[public/lead] tri anti-spam impossible, la demande est traitée normalement", e);
+    }
+    if (filed) {
+      if (b.redirect && isAllowedRedirect(b.redirect)) return NextResponse.redirect(b.redirect, 303);
+      return NextResponse.json({ ok: true }, { headers });
+    }
+
     let prospect = await findProspect(db, { ref: clip(b.ref, 32) ?? undefined, phone: clip(b.phone, 30), email: clip(b.email, 200) });
     if (!prospect) {
       ({ prospect } = await upsertProspect(db, {
@@ -58,17 +87,19 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const lines = [
-      b.interest && `Besoin : ${clip(b.interest, 200)}`,
-      b.budget && `Budget : ${clip(b.budget, 100)}`,
-      b.message && clip(b.message),
-    ].filter(Boolean);
-
     await logActivity(db, {
       prospect: prospect!, type: "formulaire", content: lines.join("\n") || "Demande de contact",
       metadata: { name: b.name, company: b.company, email: b.email, phone: b.phone, interest: b.interest, budget: b.budget, page: req.headers.get("referer") },
       prospectPatch: b.interest ? { interest: clip(b.interest, 200) } : undefined,
       created_by: "site",
+    });
+
+    // copie dans Messages : tu peux répondre au client directement depuis le CRM
+    await db.from("messages").insert({
+      direction: "entrant", source: "site", category: "client", verdict: "ok", prospect_id: prospect!.id,
+      from_email: clip(b.email, 200)?.toLowerCase() ?? null, from_name: clip(b.name, 200) ?? clip(b.company, 200),
+      subject: "Demande via le formulaire du site", body: lines.join("\n") || "Demande de contact",
+      metadata: { page: req.headers.get("referer"), phone: clip(b.phone, 30) },
     });
 
     if (b.redirect && isAllowedRedirect(b.redirect)) return NextResponse.redirect(b.redirect, 303);

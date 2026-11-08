@@ -1,6 +1,6 @@
 # CRM SolveLab
 
-Mon CRM à moi : **tout ce que fait l'agent de prospection (n8n) et tout ce que font les prospects sur solvelab.fr arrive ici.** Plus besoin d'ouvrir les mails pour savoir où en est un client.
+Mon CRM à moi, mon **seul espace de travail** : l'agent de prospection, ma boîte mail pro, les demandes de Codeur / Fiverr / Malt, le site solvelab.fr, les offres, les ventes, les suivis mensuels et le chiffre d'affaires. Plus besoin d'ouvrir Gmail ou les plateformes pour savoir où en est un client.
 
 En ligne : https://crm-prospection-eight.vercel.app · Site relié : https://www.solvelab.fr (dépôt `liveshop666/Solvelab`)
 
@@ -11,11 +11,14 @@ En ligne : https://crm-prospection-eight.vercel.app · Site relié : https://www
           API (x-api-key)
                        ▼
    ┌──────────────────────────── CRM (ce projet) ─────────────────────────────┐
-   │ Accueil · Pipeline · Prospects · Site (visites) · Offres                 │
-   └────▲───────────────▲───────────────────▲──────────────────▲──────────────┘
+   │ Accueil · Messages · Agent · Pipeline · Prospects · Site · Offres ·       │
+   │ Clients & suivis · Chiffre d'affaires                                    │
+   └────▲───────────────▲───────────────────▲──────────────────▲──────▲───────┘
         │ /r/xxx        │ formulaires +     │ webhook Cal.com  │ /offre/xxx
         │ (clic email)  │ visites du site   │ (RDV pris/annulé)│ (« J'accepte »)
-     le prospect      solvelab.fr        cal.com/solvelab     le client
+     le prospect      solvelab.fr        cal.com/solvelab     le client  │
+                                                                         │
+             Gmail pro (+ notifications Codeur, Fiverr, Malt…) ⇄ n8n 07/08 ┘
 ```
 
 ## Le parcours d'un client
@@ -34,9 +37,13 @@ S'il répond **STOP**, il est marqué ⛔ et l'agent ne le recontacte plus jamai
 | Page | Contenu |
 |---|---|
 | `/` Accueil | chiffres du jour, « Nouveau à voir », clients chauds, activité récente (menu ⋯ pour supprimer) |
+| `/messages` | **ta boîte mail pro** triée par l'IA : Boîte de réception · Plateformes · À vérifier · Autres · Envoyés · Spam. Lire, répondre, écrire (part de ton Gmail via n8n). Bouton « Répondre sur Fiverr / Codeur… » |
+| `/agent` | **ordres à l'agent** (recherche, premiers emails, relances, consigne libre), pause, réglages (métiers, villes, limite/jour, signature), suivi des ordres |
+| `/clients` | clients signés, ce qui leur a été vendu, payé / reste à encaisser, suivis mensuels |
+| `/chiffre` | chiffre d'affaires par mois (prestations + suivis), encaissé, revenu mensuel, par type de prestation et par origine du client |
 | `/pipeline` | tableau Kanban, glisser-déposer pour changer de statut |
 | `/prospects` | liste + recherche + filtres · `/prospects/nouveau` pour un ajout manuel |
-| `/prospects/:id` | fiche : appeler / email / WhatsApp, lien perso, résumé IA, historique, notes, offres |
+| `/prospects/:id` | fiche : appeler / écrire / WhatsApp, lien perso, résumé IA, messages, historique, notes, offres (type de prestation, suivi mensuel, paiements), suivis mensuels |
 | `/site` | visites de solvelab.fr, clics « Réserver un appel », demandes, RDV, graphique 14 jours. Journal conservé même si une fiche est supprimée ; ⋯ « Retirer de la liste » garde les chiffres |
 | `/offres` | toutes les offres, montants signés / en attente |
 | `/offre/:token` | **page publique** (logo SolveLab) que reçoit le client pour accepter l'offre |
@@ -48,7 +55,9 @@ Design aux couleurs de solvelab.fr (mode nuit par défaut, bouton **Clair / Nuit
 
 | Qui | Route | Protection |
 |---|---|---|
-| Agent n8n | `/api/n8n/prospects`, `/api/n8n/prospects/:id`, `/api/n8n/activities`, `/api/n8n/stats` | header `x-api-key` = `CRM_API_KEY` — détail : [`docs/API-N8N.md`](docs/API-N8N.md) |
+| Agent n8n | `/api/n8n/prospects`, `/api/n8n/prospects/:id`, `/api/n8n/activities`, `/api/n8n/stats`, `/api/n8n/tasks`, `/api/n8n/settings` | header `x-api-key` = `CRM_API_KEY` — détail : [`docs/API-N8N.md`](docs/API-N8N.md) |
+| n8n boîte mail (07 / 08) | `/api/n8n/messages`, `/api/n8n/messages/:id` | header `x-api-key` |
+| Le CRM → n8n | webhooks `N8N_MAIL_WEBHOOK_URL` (envoi d'email) et `N8N_AGENT_WEBHOOK_URL` (ordres de la page Agent) | header `x-api-key` envoyé par le CRM |
 | solvelab.fr (fonction `api/send.js`) | `/api/public/lead` | origines `PUBLIC_SITE_ORIGINS`, anti-spam |
 | solvelab.fr (fonction `api/track.js`) | `/api/public/track` | facultatif : `TRACK_SECRET` (même valeur des deux côtés) |
 | Cal.com (webhook) | `/api/public/calcom` | signature `CALCOM_WEBHOOK_SECRET` |
@@ -58,7 +67,7 @@ Branchement du site et de Cal.com : [`docs/SITE.md`](docs/SITE.md).
 ## Stack
 
 - **Next.js 15** (App Router, TypeScript, Tailwind 4) — hébergé sur Vercel
-- **Supabase** (Postgres + connexion) — tables `prospects`, `activities`, `offers` (`0001_init.sql`) et `site_events` (`0002_site_events.sql`)
+- **Supabase** (Postgres + connexion) — tables `prospects`, `activities`, `offers` (`0001_init.sql`), `site_events` (`0002_site_events.sql`), `messages`, `agent_tasks`, `settings`, `subscriptions` (`0003_espace_de_travail.sql`)
 - **n8n** pour l'agent (voir [`n8n/`](n8n/README.md))
 
 ## Installation (≈ 15 min)
@@ -89,4 +98,5 @@ npm run dev                  # http://localhost:3000
 - [x] CRM en ligne (design SolveLab, mode clair / nuit)
 - [x] solvelab.fr relié : formulaires, visites, bouton « Réserver un appel » → [`docs/SITE.md`](docs/SITE.md)
 - [x] Cal.com relié (`cal.com/solvelab/15min`)
+- [x] Espace de travail : Messages (boîte mail + plateformes, anti-spam), page Agent, Clients & suivis, Chiffre d'affaires → **mise en route : [`docs/MISE-EN-ROUTE.md`](docs/MISE-EN-ROUTE.md)**
 - [ ] Agent de prospection n8n (sur l'autre compte) → [`n8n/README.md`](n8n/README.md) + [`docs/API-N8N.md`](docs/API-N8N.md)

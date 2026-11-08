@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { STATUS_MAP } from "@/lib/constants";
-import type { Prospect, ProspectStatus } from "@/lib/types";
+import { STATUS_MAP, platformName } from "@/lib/constants";
+import type { Message, Prospect, ProspectStatus } from "@/lib/types";
 
 export function StatusBadge({ status }: { status: ProspectStatus }) {
   const s = STATUS_MAP[status];
@@ -46,4 +46,33 @@ export function ProspectLine({ p, right }: { p: Prospect; right?: React.ReactNod
 
 export function Empty({ children }: { children: React.ReactNode }) {
   return <div className="px-4 py-10 text-center text-sm text-muted">{children}</div>;
+}
+
+/** Affiché tant que le fichier SQL 0003 n'a pas été lancé dans Supabase. */
+export function SetupNotice({ title }: { title: string }) {
+  return (
+    <div className="mx-auto max-w-3xl">
+      <PageHeader title={title} />
+      <div className="card p-5 text-sm">
+        <p className="font-medium">Cette page n&apos;est pas encore installée dans ta base de données.</p>
+        <p className="mt-2 text-muted">
+          Dans Supabase → <b>SQL Editor</b> → <b>New query</b>, colle le contenu du fichier{" "}
+          <code>supabase/migrations/0003_espace_de_travail.sql</code> (dépôt GitHub crm-prospection) puis clique sur <b>Run</b>.
+          Recharge ensuite cette page.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export function Pill({ children, className = "bg-soft-2 text-muted" }: { children: React.ReactNode; className?: string }) {
+  return <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap ${className}`}>{children}</span>;
+}
+
+/** D'où vient un message : email, site, plateforme, ou envoyé par toi. */
+export function SourceBadge({ m }: { m: Pick<Message, "source" | "category" | "direction"> }) {
+  if (m.direction === "sortant") return <Pill>📤 Envoyé</Pill>;
+  if (m.category === "plateforme") return <Pill className="bg-violet-500/15 text-violet-600 dark:text-violet-300">🧲 {platformName(m.source)}</Pill>;
+  if (m.source === "site") return <Pill className="bg-cyan-500/15 text-cyan-700 dark:text-cyan-300">📝 Site</Pill>;
+  return <Pill>📥 Email</Pill>;
 }
