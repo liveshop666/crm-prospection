@@ -19,7 +19,7 @@
     },
     {
       "parameters": {
-        "content": "### 🔑 3 connexions à choisir\n1. **Gmail pro** (nœud 1)\n2. **Claude** (nœud 3)\n3. **CRM x-api-key** (nœud 5)",
+        "content": "### 🔑 3 connexions à choisir\n1. **Gmail pro** (nœud 1)\n2. **Google Gemini** (nœud 3, gratuit)\n3. **CRM x-api-key** (nœud 5)",
         "height": 200,
         "width": 300,
         "color": 6
@@ -69,7 +69,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Prépare chaque email : expéditeur, objet, texte (sans l'historique cité), liens.\nconst out = [];\nfor (const item of $input.all()) {\n  const e = item.json;\n  const from = e.from?.value?.[0] ?? {};\n  const to = e.to?.value?.[0]?.address ?? null;\n  const html = e.html || '';\n  let text = e.text || html.replace(/<style[\\s\\S]*?<\\/style>/gi, '').replace(/<br\\s*\\/?>/gi, '\\n').replace(/<\\/p>/gi, '\\n').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&');\n  text = text.replace(/\\r/g, '').replace(/\\n{3,}/g, '\\n\\n').trim();\n\n  // on coupe l'historique cité (« Le … a écrit : », « On … wrote: », « De : … »)\n  const cut = text.search(/\\n\\s*(Le .{5,120}a écrit\\s*:|On .{5,120}wrote:|-{2,}\\s*Original Message|-{2,}\\s*Message d'origine|De\\s*:.*\\n\\s*(Envoyé|Date)\\s*:)/i);\n  const reply = (cut > 20 ? text.slice(0, cut) : text).trim();\n\n  // liens de l'email (utile pour retrouver la conversation sur Codeur, Fiverr, Malt…)\n  const links = [...new Set([...html.matchAll(/href=[\"'](https?:\\/\\/[^\"'\\s>]+)[\"']/gi)].map((m) => m[1]))]\n    .filter((u) => !/unsubscribe|desinscri|désinscri|optout|tracking-pixel|\\.(png|jpe?g|gif)(\\?|$)/i.test(u))\n    .slice(0, 15);\n\n  const email = {\n    external_id: e.id,\n    thread_id: e.threadId,\n    from_email: (from.address || '').toLowerCase(),\n    from_name: from.name || null,\n    to_email: to,\n    subject: e.subject || '',\n    body: reply.slice(0, 20000),\n    received_at: e.date || new Date().toISOString(),\n  };\n\n  const prompt = `Trie cet email reçu sur l'adresse pro.\n\nRÈGLES\n- \"client\" : une vraie personne ou entreprise qui écrit directement : réponse à un email de prospection, demande de devis, question, client existant.\n- \"plateforme\" : notification d'une plateforme de freelance (Codeur, Fiverr, Malt, ComeUp, 5euros, Upwork, LinkedIn…) qui annonce un NOUVEAU projet, une demande ou un message d'un client. Récupère le nom du client, le projet, le budget et le lien vers la conversation ou le projet (platform_url : le lien du bouton « Voir le message », « Répondre » ou « Voir le projet », choisi dans la liste de liens). Une notification de plateforme sans client (newsletter, paiement reçu, facture, conseil) = \"autre\".\n- \"autre\" : newsletters, factures, banque, réseaux sociaux, Google, confirmations, notifications automatiques. Les notifications du formulaire du site solvelab.fr et de Cal.com sont DÉJÀ dans le CRM : \"autre\".\n- verdict \"spam\" : démarchage de masse (SEO, backlinks, nom de domaine, crypto, « dear sir »), phishing, arnaque, robot. verdict \"a_verifier\" si tu hésites entre vraie demande et spam. Sinon \"ok\".\n- classement (seulement si category = \"client\", sinon null) : \"chaud\" (intéressé, veut un devis, un RDV, pose des questions, nouvelle demande), \"a_relancer\" (pas maintenant, plus tard : mets relance_le), \"pas_interesse\", \"stop\" (demande de ne plus être contacté ou de se désinscrire).\n- N'invente rien : null si l'info n'est pas dans l'email.\n\nRéponds UNIQUEMENT avec ce JSON :\n{\"category\":\"client|plateforme|autre\",\"verdict\":\"ok|a_verifier|spam\",\"source\":\"email|codeur|fiverr|malt|comeup|5euros|upwork|linkedin|autre_plateforme\",\"classement\":\"chaud|a_relancer|pas_interesse|stop|null\",\"relance_le\":\"AAAA-MM-JJ ou null\",\"resume\":\"une phrase courte en français\",\"platform_url\":\"lien ou null\",\"lead\":{\"company_name\":null,\"contact_name\":null,\"email\":null,\"phone\":null,\"city\":null,\"interest\":null,\"budget\":null}}\n\nEMAIL\nDe : ${email.from_name || ''} <${email.from_email}>\nObjet : ${email.subject}\nTexte :\n${reply.slice(0, 6000)}\n\nLiens trouvés :\n${links.join('\\n') || '(aucun)'}`;\n\n  out.push({ json: {\n    email,\n    anthropic_body: {\n      model: 'claude-haiku-5-5',\n      max_tokens: 700,\n      system: \"Tu tries la boîte mail pro de SolveLab, agence digitale à Caen (sites internet, automatisation et IA, outils sur mesure, pub vidéo). Tu réponds uniquement avec un objet JSON valide, sans aucun texte autour.\",\n      messages: [{ role: 'user', content: prompt }],\n    },\n  }, pairedItem: item.pairedItem ?? { item: out.length } });\n}\nreturn out;\n"
+        "jsCode": "// Prépare chaque email : expéditeur, objet, texte (sans l'historique cité), liens.\nconst out = [];\nfor (const item of $input.all()) {\n  const e = item.json;\n  const from = e.from?.value?.[0] ?? {};\n  const to = e.to?.value?.[0]?.address ?? null;\n  const html = e.html || '';\n  let text = e.text || html.replace(/<style[\\s\\S]*?<\\/style>/gi, '').replace(/<br\\s*\\/?>/gi, '\\n').replace(/<\\/p>/gi, '\\n').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&');\n  text = text.replace(/\\r/g, '').replace(/\\n{3,}/g, '\\n\\n').trim();\n\n  // on coupe l'historique cité (« Le … a écrit : », « On … wrote: », « De : … »)\n  const cut = text.search(/\\n\\s*(Le .{5,120}a écrit\\s*:|On .{5,120}wrote:|-{2,}\\s*Original Message|-{2,}\\s*Message d'origine|De\\s*:.*\\n\\s*(Envoyé|Date)\\s*:)/i);\n  const reply = (cut > 20 ? text.slice(0, cut) : text).trim();\n\n  // liens de l'email (utile pour retrouver la conversation sur Codeur, Fiverr, Malt…)\n  const links = [...new Set([...html.matchAll(/href=[\"'](https?:\\/\\/[^\"'\\s>]+)[\"']/gi)].map((m) => m[1]))]\n    .filter((u) => !/unsubscribe|desinscri|désinscri|optout|tracking-pixel|\\.(png|jpe?g|gif)(\\?|$)/i.test(u))\n    .slice(0, 15);\n\n  const email = {\n    external_id: e.id,\n    thread_id: e.threadId,\n    from_email: (from.address || '').toLowerCase(),\n    from_name: from.name || null,\n    to_email: to,\n    subject: e.subject || '',\n    body: reply.slice(0, 20000),\n    received_at: e.date || new Date().toISOString(),\n  };\n\n  const prompt = `Trie cet email reçu sur l'adresse pro.\n\nRÈGLES\n- \"client\" : une vraie personne ou entreprise qui écrit directement : réponse à un email de prospection, demande de devis, question, client existant.\n- \"plateforme\" : notification d'une plateforme de freelance (Codeur, Fiverr, Malt, ComeUp, 5euros, Upwork, LinkedIn…) qui annonce un NOUVEAU projet, une demande ou un message d'un client. Récupère le nom du client, le projet, le budget et le lien vers la conversation ou le projet (platform_url : le lien du bouton « Voir le message », « Répondre » ou « Voir le projet », choisi dans la liste de liens). Une notification de plateforme sans client (newsletter, paiement reçu, facture, conseil) = \"autre\".\n- \"autre\" : newsletters, factures, banque, réseaux sociaux, Google, confirmations, notifications automatiques. Les notifications du formulaire du site solvelab.fr et de Cal.com sont DÉJÀ dans le CRM : \"autre\".\n- verdict \"spam\" : démarchage de masse (SEO, backlinks, nom de domaine, crypto, « dear sir »), phishing, arnaque, robot. verdict \"a_verifier\" si tu hésites entre vraie demande et spam. Sinon \"ok\".\n- classement (seulement si category = \"client\", sinon null) : \"chaud\" (intéressé, veut un devis, un RDV, pose des questions, nouvelle demande), \"a_relancer\" (pas maintenant, plus tard : mets relance_le), \"pas_interesse\", \"stop\" (demande de ne plus être contacté ou de se désinscrire).\n- N'invente rien : null si l'info n'est pas dans l'email.\n\nRéponds UNIQUEMENT avec ce JSON :\n{\"category\":\"client|plateforme|autre\",\"verdict\":\"ok|a_verifier|spam\",\"source\":\"email|codeur|fiverr|malt|comeup|5euros|upwork|linkedin|autre_plateforme\",\"classement\":\"chaud|a_relancer|pas_interesse|stop|null\",\"relance_le\":\"AAAA-MM-JJ ou null\",\"resume\":\"une phrase courte en français\",\"platform_url\":\"lien ou null\",\"lead\":{\"company_name\":null,\"contact_name\":null,\"email\":null,\"phone\":null,\"city\":null,\"interest\":null,\"budget\":null}}\n\nEMAIL\nDe : ${email.from_name || ''} <${email.from_email}>\nObjet : ${email.subject}\nTexte :\n${reply.slice(0, 6000)}\n\nLiens trouvés :\n${links.join('\\n') || '(aucun)'}`;\n\n  const system = \"Tu tries la boîte mail pro de SolveLab, agence digitale à Caen (sites internet, automatisation et IA, outils sur mesure, pub vidéo). Tu réponds uniquement avec un objet JSON valide, sans aucun texte autour.\";\n  out.push({ json: {\n    email,\n    // Gemini (gratuit) — utilisé par défaut\n    gemini_body: {\n      systemInstruction: { parts: [{ text: system }] },\n      contents: [{ role: 'user', parts: [{ text: prompt }] }],\n      generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 800, temperature: 0 },\n    },\n    // Claude (payant, ~1 €/mois) — pour passer à Claude plus tard, voir docs/MISE-EN-ROUTE.md\n    anthropic_body: {\n      model: 'claude-haiku-5-5',\n      max_tokens: 700,\n      system: \"Tu tries la boîte mail pro de SolveLab, agence digitale à Caen (sites internet, automatisation et IA, outils sur mesure, pub vidéo). Tu réponds uniquement avec un objet JSON valide, sans aucun texte autour.\",\n      messages: [{ role: 'user', content: prompt }],\n    },\n  }, pairedItem: item.pairedItem ?? { item: out.length } });\n}\nreturn out;\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -83,21 +83,12 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://api.anthropic.com/v1/messages",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent",
         "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "anthropicApi",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "anthropic-version",
-              "value": "2023-06-01"
-            }
-          ]
-        },
+        "nodeCredentialType": "googlePalmApi",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json.anthropic_body) }}",
+        "jsonBody": "={{ JSON.stringify($json.gemini_body) }}",
         "options": {
           "timeout": 60000
         }
@@ -109,11 +100,11 @@
         40
       ],
       "id": "0ed7355f-a6e8-476c-ac37-12697c75b369",
-      "name": "3. IA : trier l'email",
+      "name": "3. IA (Gemini, gratuit) : trier l'email",
       "credentials": {
-        "anthropicApi": {
+        "googlePalmApi": {
           "id": "a-choisir",
-          "name": "Claude"
+          "name": "Google Gemini(PaLM) Api account"
         }
       },
       "retryOnFail": true,
@@ -122,7 +113,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Lit la réponse de l'IA et prépare l'envoi au CRM.\nconst prepared = $('Préparer l\\'email').all();\nreturn $input.all().map((item, i) => {\n  const email = prepared[i]?.json.email ?? {};\n  let ai = null;\n  try {\n    const raw = (item.json.content ?? []).map((c) => c.text ?? '').join('').trim();\n    const json = raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1);\n    ai = JSON.parse(json);\n  } catch (e) { ai = null; }\n\n  const nul = (v) => (v === 'null' || v === '' || v === undefined ? null : v);\n  if (!ai) {\n    return { json: { ...email, category: 'client', verdict: 'a_verifier', source: 'email', ai_summary: \"L'IA n'a pas pu trier cet email : à vérifier.\" } };\n  }\n  const lead = Object.fromEntries(Object.entries(ai.lead ?? {}).map(([k, v]) => [k, nul(v)]));\n  return { json: {\n    ...email,\n    category: ai.category,\n    verdict: ai.verdict,\n    source: ai.category === 'plateforme' ? (nul(ai.source) ?? 'plateforme') : 'email',\n    classement: nul(ai.classement),\n    relance_le: nul(ai.relance_le),\n    ai_summary: nul(ai.resume),\n    platform_url: nul(ai.platform_url),\n    lead,\n  } };\n});\n"
+        "jsCode": "// Lit la réponse de l'IA et prépare l'envoi au CRM.\nconst prepared = $('Préparer l\\'email').all();\nreturn $input.all().map((item, i) => {\n  const email = prepared[i]?.json.email ?? {};\n  let ai = null;\n  try {\n    // réponse de Gemini (candidates) ou de Claude (content)\n    const parts = item.json.candidates?.[0]?.content?.parts ?? item.json.content ?? [];\n    const raw = parts.map((c) => c.text ?? '').join('').trim();\n    const json = raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1);\n    ai = JSON.parse(json);\n  } catch (e) { ai = null; }\n\n  const nul = (v) => (v === 'null' || v === '' || v === undefined ? null : v);\n  if (!ai) {\n    return { json: { ...email, category: 'client', verdict: 'a_verifier', source: 'email', ai_summary: \"L'IA n'a pas pu trier cet email : à vérifier.\" } };\n  }\n  const lead = Object.fromEntries(Object.entries(ai.lead ?? {}).map(([k, v]) => [k, nul(v)]));\n  return { json: {\n    ...email,\n    category: ai.category,\n    verdict: ai.verdict,\n    source: ai.category === 'plateforme' ? (nul(ai.source) ?? 'plateforme') : 'email',\n    classement: nul(ai.classement),\n    relance_le: nul(ai.relance_le),\n    ai_summary: nul(ai.resume),\n    platform_url: nul(ai.platform_url),\n    lead,\n  } };\n});\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -179,18 +170,7 @@
       "main": [
         [
           {
-            "node": "3. IA : trier l'email",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "3. IA : trier l'email": {
-      "main": [
-        [
-          {
-            "node": "Lire le tri de l'IA",
+            "node": "3. IA (Gemini, gratuit) : trier l'email",
             "type": "main",
             "index": 0
           }
@@ -202,6 +182,17 @@
         [
           {
             "node": "5. Envoyer au CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3. IA (Gemini, gratuit) : trier l'email": {
+      "main": [
+        [
+          {
+            "node": "Lire le tri de l'IA",
             "type": "main",
             "index": 0
           }
