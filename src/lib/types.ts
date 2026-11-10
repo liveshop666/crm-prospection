@@ -64,6 +64,7 @@ export interface Offer {
   payment_status: PaymentStatus;
   paid_cents: number;
   paid_at: string | null;
+  avis_demande_at?: string | null;
 }
 
 export type PaymentStatus = "non_paye" | "acompte" | "paye";

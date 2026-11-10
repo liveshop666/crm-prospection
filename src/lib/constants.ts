@@ -108,3 +108,6 @@ export const TASK_STATUS: Record<AgentTaskStatus, { label: string; color: string
   erreur:     { label: "Erreur",            color: "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300" },
   annule:     { label: "Annulé",            color: "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400" },
 };
+
+/** Lien « laisser un avis » de la fiche Google de SolveLab (ouvre directement la fenêtre des étoiles). */
+export const LIEN_AVIS_GOOGLE = "https://g.page/r/CQi8UBMlIa7wEBM/review";

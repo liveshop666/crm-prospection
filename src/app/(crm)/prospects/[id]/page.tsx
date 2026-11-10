@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { addNote, createOffer, deleteOffer, deleteProspect, markOfferSent, setOptOut, updateProspect } from "@/app/actions";
-import { createSubscription, deleteSubscription, markOfferAccepted, setOfferPayment, setSubscriptionStatus } from "@/app/actions-workspace";
+import { createSubscription, deleteSubscription, demanderAvisGoogle, markOfferAccepted, setOfferPayment, setSubscriptionStatus } from "@/app/actions-workspace";
 import { AgentFiche } from "@/components/agent/AgentFiche";
 import { ConfirmButton, CopyButton, MarkRead, StatusSelect } from "@/components/client";
 import { RowMenu } from "@/components/RowMenu";
@@ -118,6 +118,19 @@ export default async function ProspectPage({ params, searchParams }: { params: P
                       <input name="paid" inputMode="decimal" placeholder="Acompte €" defaultValue={o.paid_cents ? String(o.paid_cents / 100) : ""} className="input w-24 py-1 text-xs" />
                       <button className="btn-ghost py-1 text-xs">OK</button>
                     </form>
+                  )}
+                  {o.status === "acceptee" && o.payment_status === "paye" && (
+                    <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg bg-amber-500/10 p-2 text-xs">
+                      {prospect.email ? (
+                        <form action={demanderAvisGoogle.bind(null, o.id)}>
+                          <ConfirmButton className="btn-primary py-1 text-xs"
+                            message={`Projet terminé ? Un e-mail de remerciement avec ton lien d'avis Google part tout de suite à ${prospect.email}.`}>
+                            {o.avis_demande_at ? "⭐ Redemander un avis Google" : "⭐ Demander un avis Google"}
+                          </ConfirmButton>
+                        </form>
+                      ) : <span className="text-muted">⭐ Ajoute l&apos;e-mail du client pour lui demander un avis Google.</span>}
+                      {o.avis_demande_at && <span className="text-muted">Demandé le {date(o.avis_demande_at)}</span>}
+                    </div>
                   )}
                   <div className="mt-2 flex flex-wrap gap-2">
                     <CopyButton text={`${appUrl}/offre/${o.public_token}`} label="Copier le lien" />

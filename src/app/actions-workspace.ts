@@ -7,6 +7,7 @@ import { attachToProspect } from "@/lib/messages";
 import { callN8n } from "@/lib/n8n";
 import { createSubscriptionFromOffer } from "@/lib/sales";
 import { getSettings, saveSettings, splitList } from "@/lib/settings";
+import { LIEN_AVIS_GOOGLE } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/server";
 import type { AgentTaskType, Message, Offer, Prospect } from "@/lib/types";
 
@@ -292,4 +293,41 @@ export async function deleteSubscription(id: string, prospectId: string) {
   const supabase = await db();
   await supabase.from("subscriptions").delete().eq("id", id);
   revalidateSales(prospectId);
+}
+
+/**
+ * Projet terminé et payé : demande d'avis Google au client, depuis contact@solvelab.fr (workflow 08).
+ * Le lien ouvre directement la fenêtre des étoiles de la fiche Google de SolveLab.
+ */
+export async function demanderAvisGoogle(offerId: string) {
+  const supabase = await db();
+  const offer = await getOffer(supabase, offerId);
+  if (offer.status !== "acceptee" || offer.payment_status !== "paye") return;
+  const { data } = await supabase.from("prospects").select("*").eq("id", offer.prospect_id).single();
+  const p = data as Prospect;
+  if (!p?.email) return;
+  const prenom = (p.contact_name ?? "").trim().split(/\s+/)[0];
+  const subject = "Merci pour votre confiance — un petit avis ?";
+  const body = `Bonjour${prenom ? " " + prenom : ""},
+
+Votre projet « ${offer.title} » est terminé : merci encore pour votre confiance, ce fut un plaisir de travailler avec vous.
+
+Si vous êtes satisfait, pourriez-vous laisser un petit avis sur Google ? Ça prend 30 secondes et ça aide énormément une agence locale comme SolveLab :
+${LIEN_AVIS_GOOGLE}
+
+Et si quelque chose peut être amélioré, répondez simplement à ce message : je m'en occupe.
+
+Merci beaucoup et à bientôt,
+Rudy — SolveLab, à Carpiquet · contact@solvelab.fr`;
+  const { data: msg, error } = await supabase.from("messages").insert({
+    direction: "sortant", source: "email", category: "client", verdict: "ok", is_read: true,
+    prospect_id: p.id, to_email: p.email.toLowerCase(), subject, body, send_status: "a_envoyer",
+  }).select().single();
+  if (error) return;
+  const r = await callN8n("mail", { action: "envoyer_email", message_id: msg.id, to: p.email.toLowerCase(), subject, body, thread_id: null, reply_to_external_id: null });
+  if (!r.ok) await supabase.from("messages").update({ error: r.error }).eq("id", msg.id);
+  await supabase.from("offers").update({ avis_demande_at: new Date().toISOString() }).eq("id", offerId);
+  await logActivity(supabase, { prospect: p, type: "note", created_by: "rudy", content: "⭐ Demande d'avis Google envoyée", metadata: { offer_id: offerId } });
+  revalidateSales(offer.prospect_id);
+  revalidatePath("/messages");
 }
