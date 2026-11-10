@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { setSubscriptionStatus } from "@/app/actions-workspace";
+import { deleteSubscription, setSubscriptionStatus } from "@/app/actions-workspace";
+import { ConfirmButton } from "@/components/client";
 import { Empty, PageHeader, Pill, SetupNotice, Stat } from "@/components/ui";
 import { serviceLabel, sourceLabel } from "@/lib/constants";
 import { date, euro } from "@/lib/format";
@@ -79,6 +80,7 @@ export default async function ClientsPage() {
                       <span className="ml-auto font-semibold tabular-nums">{euro(s.monthly_cents)} / mois</span>
                       {s.status === "actif" && <form action={setSubscriptionStatus.bind(null, s.id, p.id, "pause")}><button className="text-xs text-muted underline">pause</button></form>}
                       {s.status === "pause" && <form action={setSubscriptionStatus.bind(null, s.id, p.id, "actif")}><button className="text-xs text-muted underline">réactiver</button></form>}
+                      <form action={deleteSubscription.bind(null, s.id, p.id)}><ConfirmButton className="text-xs text-rose-600 underline dark:text-rose-400" message="Supprimer ce suivi ? Il sort du chiffre d'affaires.">supprimer</ConfirmButton></form>
                     </li>
                   ))}
                 </ul>
