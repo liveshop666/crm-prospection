@@ -1,4 +1,6 @@
-import { cancelAgentTask, saveAgentSettings, setAgentPaused } from "@/app/actions-workspace";
+import { cancelAgentTask, clearAgentTasks, saveAgentSettings, setAgentPaused } from "@/app/actions-workspace";
+import { ConfirmButton } from "@/components/client";
+import { RowMenu } from "@/components/RowMenu";
 import { Empty, PageHeader, ProspectLine, SetupNotice, Stat } from "@/components/ui";
 import { AgentTaskForm } from "@/components/workspace";
 import { TASK_STATUS, TASK_TYPES } from "@/lib/constants";
@@ -113,7 +115,14 @@ export default async function AgentPage() {
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         <section className="card overflow-hidden">
-          <h2 className="border-b border-border px-4 py-3 text-sm font-semibold">📋 Ordres donnés</h2>
+          <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <h2 className="text-sm font-semibold">📋 Ordres donnés</h2>
+            {list.some((t) => ["termine", "erreur", "annule"].includes(t.status)) && (
+              <form action={clearAgentTasks}>
+                <ConfirmButton className="text-xs text-muted underline hover:text-text" message="Vider l'historique des ordres terminés, en erreur ou annulés ? Les ordres en attente restent.">🗑️ Vider l&apos;historique</ConfirmButton>
+              </form>
+            )}
+          </div>
           <ul className="divide-y divide-border">
             {list.length === 0 ? <Empty>Aucun ordre pour l&apos;instant.</Empty> : list.map((t) => (
               <li key={t.id} className="px-4 py-3">
@@ -121,6 +130,7 @@ export default async function AgentPage() {
                   <span className="text-sm font-medium">{TASK_TYPES[t.type].emoji} {TASK_TYPES[t.type].label}</span>
                   <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${TASK_STATUS[t.status].color}`}>{TASK_STATUS[t.status].label}</span>
                   <span className="ml-auto text-xs text-muted" title={dateTime(t.created_at)}>{timeAgo(t.created_at)}</span>
+                  <RowMenu id={t.id} kind="task" />
                 </div>
                 <div className="mt-1 truncate text-xs text-muted">{describe(t)}</div>
                 {t.summary && <p className="mt-2 rounded-lg bg-soft p-2 text-sm whitespace-pre-line">{t.summary}</p>}

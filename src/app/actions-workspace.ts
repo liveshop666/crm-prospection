@@ -114,6 +114,59 @@ export async function clearMessages(tab: string) {
   revalidatePath("/messages"); revalidatePath("/");
 }
 
+function revalidateAll() {
+  for (const p of ["/", "/prospects", "/pipeline", "/offres", "/clients", "/chiffre", "/agent", "/messages"]) revalidatePath(p);
+}
+
+/** Supprime des fiches (avec leur historique et leurs offres). Les chiffres des visites du site restent. */
+export async function deleteProspectsByIds(ids: string[]) {
+  const supabase = await db();
+  const clean = ids.filter((i) => /^[0-9a-f-]{36}$/i.test(i)).slice(0, 500);
+  if (!clean.length) return;
+  await supabase.from("prospects").delete().in("id", clean);
+  revalidateAll();
+}
+export async function removeProspectRow(id: string) { await deleteProspectsByIds([id]); }
+
+export async function removeOffer(id: string) {
+  const supabase = await db();
+  await supabase.from("offers").delete().eq("id", id);
+  revalidateAll();
+}
+
+/** Supprime les offres brouillon / envoyées / refusées. Les offres signées restent (elles font ton chiffre d'affaires). */
+export async function clearUnsignedOffers() {
+  const supabase = await db();
+  await supabase.from("offers").delete().neq("status", "acceptee");
+  revalidateAll();
+}
+
+export async function removeAgentTask(id: string) {
+  const supabase = await db();
+  await supabase.from("agent_tasks").delete().eq("id", id);
+  revalidatePath("/agent");
+}
+
+/** Vide l'historique des ordres terminés, en erreur ou annulés (ceux en attente restent). */
+export async function clearAgentTasks() {
+  const supabase = await db();
+  await supabase.from("agent_tasks").delete().in("status", ["termine", "erreur", "annule"]);
+  revalidatePath("/agent");
+}
+
+/**
+ * Vide « Activité récente » de l'accueil SANS toucher aux chiffres (envoyés, réponses…) :
+ * les lignes sont masquées de l'accueil mais restent dans l'historique de chaque fiche.
+ */
+export async function hideRecentFeed() {
+  const supabase = await db();
+  const { data } = await supabase.from("activities").select("id, metadata")
+    .not("type", "eq", "changement_statut").filter("metadata->>hidden", "is", null).limit(300);
+  await Promise.all((data ?? []).map((a) =>
+    supabase.from("activities").update({ metadata: { ...(a.metadata ?? {}), hidden: true } }).eq("id", a.id)));
+  revalidatePath("/");
+}
+
 export async function deleteMessage(id: string) {
   const supabase = await db();
   await supabase.from("messages").delete().eq("id", id);

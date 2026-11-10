@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { deleteProspectsByIds } from "@/app/actions-workspace";
+import { ConfirmButton } from "@/components/client";
+import { RowMenu } from "@/components/RowMenu";
 import { Empty, PageHeader, StatusBadge } from "@/components/ui";
 import { STATUSES } from "@/lib/constants";
 import { timeAgo } from "@/lib/format";
@@ -30,6 +33,13 @@ export default async function ProspectsPage({ searchParams }: { searchParams: Pr
         <button className="btn-ghost">Filtrer</button>
       </form>
 
+      {prospects.length > 0 && (
+        <div className="mb-2 flex justify-end">
+          <form action={deleteProspectsByIds.bind(null, prospects.map((p) => p.id))}>
+            <ConfirmButton message={`Supprimer les ${prospects.length} fiches affichées, avec leur historique et leurs offres ? Les chiffres des visites du site restent.`}>🗑️ Tout supprimer ({prospects.length})</ConfirmButton>
+          </form>
+        </div>
+      )}
       <div className="card overflow-hidden">
         {prospects.length === 0 ? <Empty>Aucun prospect trouvé.</Empty> : (
           <div className="overflow-x-auto">
@@ -42,6 +52,7 @@ export default async function ProspectsPage({ searchParams }: { searchParams: Pr
                   <th className="px-4 py-2 font-medium">Statut</th>
                   <th className="hidden px-4 py-2 font-medium lg:table-cell">Score</th>
                   <th className="hidden px-4 py-2 text-right font-medium lg:table-cell">Mis à jour</th>
+                  <th className="w-10 px-2 py-2" aria-label="Options" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -59,6 +70,7 @@ export default async function ProspectsPage({ searchParams }: { searchParams: Pr
                     <td className="px-4 py-2.5"><StatusBadge status={p.status} /></td>
                     <td className="hidden px-4 py-2.5 tabular-nums lg:table-cell">{p.score ?? "—"}</td>
                     <td className="hidden px-4 py-2.5 text-right text-muted lg:table-cell">{timeAgo(p.updated_at)}</td>
+                    <td className="px-2 py-1.5"><RowMenu id={p.id} kind="prospect" /></td>
                   </tr>
                 ))}
               </tbody>

@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { hideRecentFeed } from "@/app/actions-workspace";
+import { ConfirmButton } from "@/components/client";
 import { RowMenu } from "@/components/RowMenu";
 import { Empty, PageHeader, ProspectLine, Stat } from "@/components/ui";
 import { ACTIVITY_LABELS } from "@/lib/constants";
@@ -14,7 +16,7 @@ export default async function Dashboard() {
     supabase.from("prospects").select("*").eq("is_unread", true).order("updated_at", { ascending: false }).limit(10),
     supabase.from("prospects").select("*").in("status", ["chaud", "rdv"]).order("updated_at", { ascending: false }).limit(10),
     supabase.from("activities").select("*, prospects(id, company_name)")
-      .not("type", "eq", "changement_statut").order("created_at", { ascending: false }).limit(15),
+      .not("type", "eq", "changement_statut").filter("metadata->>hidden", "is", null).order("created_at", { ascending: false }).limit(15),
   ]);
 
   return (
@@ -45,7 +47,12 @@ export default async function Dashboard() {
         </section>
 
         <section className="card lg:col-span-2">
-          <h2 className="border-b border-border px-4 py-3 text-sm font-semibold">⚡ Activité récente</h2>
+          <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <h2 className="text-sm font-semibold">⚡ Activité récente</h2>
+            <form action={hideRecentFeed}>
+              <ConfirmButton className="text-xs text-muted underline hover:text-text" message="Vider cette liste ? Les chiffres du haut de la page ne changent pas, et l'historique de chaque fiche reste.">🗑️ Tout retirer</ConfirmButton>
+            </form>
+          </div>
           <ul className="divide-y divide-border">
             {(feed as (Activity & { prospects: { id: string; company_name: string } | null })[] | null)?.length ? (
               (feed as (Activity & { prospects: { id: string; company_name: string } | null })[]).map((a) => (

@@ -2,10 +2,18 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { deleteActivity, hideSiteEvent } from "@/app/actions";
-import { removeMessage, setMessageVerdict } from "@/app/actions-workspace";
+import {
+  removeAgentTask, removeMessage, removeOffer, removeProspectRow, setMessageVerdict,
+} from "@/app/actions-workspace";
 
-/** Petit menu « ⋯ » avec « Supprimer » pour une ligne de journal ou d'historique. */
-export function RowMenu({ id, kind, hasProspect = false }: { id: string; kind: "site" | "activity" | "message"; hasProspect?: boolean }) {
+type Kind = "site" | "activity" | "message" | "prospect" | "offer" | "task";
+type Choice = "spam" | "message" | "message+fiche";
+
+const ITEM = "w-full px-3 py-2 text-left text-sm hover:bg-soft";
+const DANGER = `${ITEM} text-rose-600 dark:text-rose-400`;
+
+/** Petit menu « ⋯ » avec les suppressions possibles pour une ligne (message, fiche, offre, ordre, historique…). */
+export function RowMenu({ id, kind, hasProspect = false }: { id: string; kind: Kind; hasProspect?: boolean }) {
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   const [gone, setGone] = useState(false);
@@ -22,17 +30,24 @@ export function RowMenu({ id, kind, hasProspect = false }: { id: string; kind: "
     return () => { document.removeEventListener("mousedown", close); document.removeEventListener("keydown", close); };
   }, [open]);
 
-  const remove = (action: "spam" | "message" | "message+fiche" = "message") => {
-    if (kind === "activity" && !confirm("Supprimer cette ligne de l'historique ?")) return;
-    if (action === "message+fiche" && !confirm("Supprimer ce message ET la fiche client liée (avec son historique et ses offres) ?")) return;
+  const run = (choice?: Choice) => {
+    const ask =
+      kind === "activity" ? "Supprimer cette ligne de l'historique ?"
+      : kind === "prospect" ? "Supprimer cette fiche avec son historique, ses messages liés et ses offres ?"
+      : kind === "offer" ? "Supprimer cette offre ? Si elle était signée, elle sort du chiffre d'affaires."
+      : choice === "message+fiche" ? "Supprimer ce message ET la fiche client liée (avec son historique et ses offres) ?"
+      : null;
+    if (ask && !confirm(ask)) return;
     setOpen(false);
     start(async () => {
       try {
-        if (kind === "message") {
-          await (action === "spam" ? setMessageVerdict(id, "spam") : removeMessage(id, action === "message+fiche"));
-        } else {
-          await (kind === "site" ? hideSiteEvent(id) : deleteActivity(id));
-        }
+        if (kind === "site") await hideSiteEvent(id);
+        else if (kind === "activity") await deleteActivity(id);
+        else if (kind === "prospect") await removeProspectRow(id);
+        else if (kind === "offer") await removeOffer(id);
+        else if (kind === "task") await removeAgentTask(id);
+        else if (choice === "spam") await setMessageVerdict(id, "spam");
+        else await removeMessage(id, choice === "message+fiche");
         setGone(true);
         router.refresh();
       } catch {
@@ -51,25 +66,24 @@ export function RowMenu({ id, kind, hasProspect = false }: { id: string; kind: "
       </button>
       {open && (
         <div className="absolute right-0 z-20 mt-1 w-56 overflow-hidden rounded-lg border border-border bg-surface py-1 shadow-lg">
-          {kind === "site" ? (
-            <button type="button" onClick={() => remove()} className="w-full px-3 py-2 text-left text-sm hover:bg-soft">
+          {kind === "site" && (
+            <button type="button" onClick={() => run()} className={ITEM}>
               🗑️ Retirer de la liste<span className="block text-xs text-muted">les chiffres restent</span>
             </button>
-          ) : kind === "message" ? (
+          )}
+          {kind === "message" && (
             <>
-              <button type="button" onClick={() => remove("spam")} className="w-full px-3 py-2 text-left text-sm hover:bg-soft">
+              <button type="button" onClick={() => run("spam")} className={ITEM}>
                 🚫 C&apos;est du spam<span className="block text-xs text-muted">va dans l&apos;onglet Spam</span>
               </button>
-              <button type="button" onClick={() => remove("message")} className="w-full px-3 py-2 text-left text-sm text-rose-600 dark:text-rose-400 hover:bg-soft">🗑️ Supprimer le message</button>
-              {hasProspect && (
-                <button type="button" onClick={() => remove("message+fiche")} className="w-full px-3 py-2 text-left text-sm text-rose-600 dark:text-rose-400 hover:bg-soft">
-                  🗑️ Supprimer message + fiche
-                </button>
-              )}
+              <button type="button" onClick={() => run("message")} className={DANGER}>🗑️ Supprimer le message</button>
+              {hasProspect && <button type="button" onClick={() => run("message+fiche")} className={DANGER}>🗑️ Supprimer message + fiche</button>}
             </>
-          ) : (
-            <button type="button" onClick={() => remove()} className="w-full px-3 py-2 text-left text-sm text-rose-600 dark:text-rose-400 hover:bg-soft">🗑️ Supprimer</button>
           )}
+          {kind === "prospect" && <button type="button" onClick={() => run()} className={DANGER}>🗑️ Supprimer la fiche</button>}
+          {kind === "offer" && <button type="button" onClick={() => run()} className={DANGER}>🗑️ Supprimer l&apos;offre</button>}
+          {kind === "task" && <button type="button" onClick={() => run()} className={DANGER}>🗑️ Supprimer cet ordre</button>}
+          {kind === "activity" && <button type="button" onClick={() => run()} className={DANGER}>🗑️ Supprimer</button>}
         </div>
       )}
     </div>

@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { clearUnsignedOffers } from "@/app/actions-workspace";
+import { ConfirmButton } from "@/components/client";
+import { RowMenu } from "@/components/RowMenu";
 import { Empty, PageHeader, Stat } from "@/components/ui";
 import { OFFER_STATUS, PAYMENT_STATUS, serviceLabel } from "@/lib/constants";
 import { date, euro } from "@/lib/format";
@@ -19,9 +22,17 @@ export default async function OffersPage() {
         <Stat label="En attente" value={euro(sum("envoyee"))} />
         <Stat label="Brouillons" value={euro(sum("brouillon"))} />
       </div>
+      {offers.some((o) => o.status !== "acceptee") && (
+        <div className="mb-2 flex justify-end">
+          <form action={clearUnsignedOffers}>
+            <ConfirmButton message="Supprimer toutes les offres non signées (brouillons, envoyées, refusées) ? Les offres signées restent : elles font ton chiffre d'affaires.">🗑️ Supprimer les offres non signées</ConfirmButton>
+          </form>
+        </div>
+      )}
       <div className="card divide-y divide-border overflow-hidden">
         {offers.length === 0 ? <Empty>Aucune offre pour l&apos;instant.</Empty> : offers.map((o) => (
-          <Link key={o.id} href={`/prospects/${o.prospect_id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-soft">
+          <div key={o.id} className="flex items-center gap-1 pr-2 hover:bg-soft">
+          <Link href={`/prospects/${o.prospect_id}`} className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3">
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-medium">{o.title}</div>
               <div className="truncate text-xs text-muted">{o.prospects?.company_name} · {serviceLabel(o.service_type)} · {date(o.created_at)}{o.monthly_cents > 0 && ` · + ${euro(o.monthly_cents)}/mois`}</div>
@@ -29,6 +40,8 @@ export default async function OffersPage() {
             <span className="text-right text-xs text-muted">{OFFER_STATUS[o.status]}{o.status === "acceptee" && <><br />{PAYMENT_STATUS[o.payment_status ?? "non_paye"]}</>}</span>
             <span className="w-24 text-right text-sm font-semibold tabular-nums">{euro(o.amount_cents)}</span>
           </Link>
+          <RowMenu id={o.id} kind="offer" />
+          </div>
         ))}
       </div>
     </div>
