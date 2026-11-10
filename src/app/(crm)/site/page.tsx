@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { hideAllSiteEvents } from "@/app/actions";
+import { ConfirmButton } from "@/components/client";
 import { RowMenu } from "@/components/RowMenu";
 import { Empty, PageHeader, Stat } from "@/components/ui";
 import { dateTime } from "@/lib/format";
@@ -130,6 +132,13 @@ export default async function SitePage({ searchParams }: { searchParams: Promise
             ))}
           </div>
         </div>
+        {recent.length > 0 && (
+          <div className="flex justify-end border-b border-border px-4 py-2">
+            <form action={hideAllSiteEvents.bind(null, type && LABEL[type] ? type : undefined)}>
+              <ConfirmButton message="Retirer tous ces passages de la liste ? Les chiffres du haut de la page ne changent pas.">🗑️ Tout retirer de la liste</ConfirmButton>
+            </form>
+          </div>
+        )}
         {recent.length === 0 ? <Empty>Aucun passage enregistré pour l&apos;instant.</Empty> : (
           <ul className="divide-y divide-border">
             {recent.map((e) => {

@@ -89,6 +89,31 @@ export async function setMessageVerdict(id: string, verdict: "ok" | "spam") {
   revalidatePath("/messages"); revalidatePath(`/messages/${id}`); revalidatePath("/");
 }
 
+/** Supprime un message du CRM (reste dans ta boîte mail). Avec `withProspect`, supprime aussi la fiche liée. */
+export async function removeMessage(id: string, withProspect = false) {
+  const supabase = await db();
+  const { data } = await supabase.from("messages").select("prospect_id").eq("id", id).maybeSingle();
+  await supabase.from("messages").delete().eq("id", id);
+  if (withProspect && data?.prospect_id) await supabase.from("prospects").delete().eq("id", data.prospect_id);
+  revalidatePath("/messages"); revalidatePath("/");
+  if (data?.prospect_id) revalidatePath(`/prospects/${data.prospect_id}`);
+}
+
+/** Vide un onglet de Messages d'un seul coup. Les fiches clients ne sont pas touchées. */
+export async function clearMessages(tab: string) {
+  const supabase = await db();
+  let q = supabase.from("messages").delete();
+  if (tab === "boite") q = q.eq("direction", "entrant").eq("verdict", "ok").in("category", ["client", "plateforme"]);
+  else if (tab === "plateformes") q = q.eq("direction", "entrant").eq("verdict", "ok").eq("category", "plateforme");
+  else if (tab === "verifier") q = q.eq("direction", "entrant").eq("verdict", "a_verifier");
+  else if (tab === "autres") q = q.eq("direction", "entrant").eq("verdict", "ok").eq("category", "autre");
+  else if (tab === "envoyes") q = q.eq("direction", "sortant");
+  else if (tab === "spam") q = q.eq("verdict", "spam");
+  else return;
+  await q;
+  revalidatePath("/messages"); revalidatePath("/");
+}
+
 export async function deleteMessage(id: string) {
   const supabase = await db();
   await supabase.from("messages").delete().eq("id", id);
