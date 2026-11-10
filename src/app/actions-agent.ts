@@ -133,3 +133,17 @@ export async function demandeRgpd(fd: FormData) {
   fini();
   return data as { ok: boolean; supprimees?: number; donnees?: unknown[] };
 }
+
+/** Import d'une liste : un paquet de lignes déjà préparées dans le navigateur (500 au plus). */
+export async function importerPaquet(lignes: Record<string, unknown>[]) {
+  await db(); // réservé à Rudy connecté
+  if (!Array.isArray(lignes) || lignes.length === 0 || lignes.length > 500) return { ok: false, erreur: "paquet invalide" };
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const { data, error } = await createAdminClient().rpc("agent_importer", { p_rows: lignes });
+  if (error) return { ok: false, erreur: error.message };
+  return { ok: true, bilan: data as Record<string, number> };
+}
+
+export async function finImport() {
+  fini();
+}

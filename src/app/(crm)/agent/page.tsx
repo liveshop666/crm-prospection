@@ -4,6 +4,7 @@ import { FileValidation } from "@/components/agent/FileValidation";
 import { EnCeMoment } from "@/components/agent/EnCeMoment";
 import { FilDirect, RafraichirEnDirect } from "@/components/agent/FilDirect";
 import { EntreprisesAgent } from "@/components/agent/EntreprisesAgent";
+import { ImportListe } from "@/components/agent/ImportListe";
 import { BoutonFait, BoutonMode, BoutonPause, BoutonSupprimer, BoutonTester } from "@/components/agent/Pilotage";
 import { CopyButton } from "@/components/client";
 import { PageHeader, Stat } from "@/components/ui";
@@ -112,6 +113,7 @@ export default async function AgentPage() {
 
           {/* Toutes les entreprises trouvées par l'agent */}
           <EntreprisesAgent />
+          <ImportListe />
 
           {/* 7. Listes d'action */}
           <div className="grid gap-4 md:grid-cols-3">
