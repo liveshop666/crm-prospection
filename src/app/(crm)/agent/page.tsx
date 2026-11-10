@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { demandeRgpd, enregistrerReglages } from "@/app/actions-agent";
 import { FileValidation } from "@/components/agent/FileValidation";
+import { EnCeMoment } from "@/components/agent/EnCeMoment";
 import { FilDirect, RafraichirEnDirect } from "@/components/agent/FilDirect";
 import { BoutonFait, BoutonMode, BoutonPause, BoutonTester } from "@/components/agent/Pilotage";
 import { CopyButton } from "@/components/client";
@@ -17,7 +18,7 @@ export const dynamic = "force-dynamic";
  */
 export default async function AgentPage() {
   const supabase = await createClient();
-  const [{ data: t, error }, { data: ev }, { data: msgs }, { data: actions }, { data: chauds }] = await Promise.all([
+  const [{ data: t, error }, { data: ev }, { data: msgs }, { data: actions }, { data: chauds }, { data: runs }] = await Promise.all([
     supabase.rpc("agent_tableau"),
     supabase.from("agent_events").select("id, created_at, entreprise_id, etape, phrase, niveau").order("id", { ascending: false }).limit(80),
     supabase.from("agent_messages").select("*, agent_entreprises(*)").in("statut", ["a_valider", "valide"]).in("canal", ["email", "sms"])
@@ -25,7 +26,13 @@ export default async function AgentPage() {
     supabase.from("agent_messages").select("id, canal, texte_propose, statut, agent_entreprises(nom, metier, ville, telephone, linkedin_url, prospect_id, score)")
       .eq("statut", "a_faire").order("created_at", { ascending: false }).limit(40),
     supabase.from("agent_entreprises").select("id, nom, metier, ville, telephone, prospect_id, reponse_at").eq("statut", "chaud").order("reponse_at", { ascending: false }).limit(20),
+    supabase.from("agent_runs").select("workflow, statut, created_at").eq("statut", "en_cours").gte("created_at", new Date(Date.now() - 10 * 60e3).toISOString()).limit(1),
   ]);
+  const evts = (ev ?? []) as AgentEvent[];
+  const idsFiches = [...new Set(evts.map((e) => e.entreprise_id).filter(Boolean))].slice(0, 20) as string[];
+  const { data: fiches } = idsFiches.length
+    ? await supabase.from("agent_entreprises").select("id, nom, metier, ville").in("id", idsFiches)
+    : { data: [] };
 
   if (error || !t) {
     return (
@@ -47,11 +54,15 @@ export default async function AgentPage() {
   const aAppeler = liste.filter((a) => a.canal === "appel");
   const linkedin = liste.filter((a) => a.canal === "linkedin");
 
-  const etat = !c.actif ? { txt: "Désactivé", cls: "bg-slate-500/15" }
-    : c.pause ? { txt: "⏸️ En pause", cls: "bg-amber-500/15 text-amber-700 dark:text-amber-300" }
-    : b?.niveau === "pause_envois" ? { txt: "⚠️ Quota surveillé : envois en pause", cls: "bg-rose-500/15 text-rose-700 dark:text-rose-300" }
-    : c.simulation ? { txt: `🧪 Simulation — prochain passage à ${tab.prochain_passage ?? "—"}`, cls: "bg-sky-500/15 text-sky-700 dark:text-sky-300" }
-    : { txt: `🟢 Actif — prochain passage à ${tab.prochain_passage ?? "—"}`, cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" };
+  // Bandeau à la première personne : l'agent dit ce qu'il fait, comme un collègue
+  const auTravail = (runs ?? []).length > 0;
+  const derniere = evts[0]?.phrase?.replace(/[.…]+$/, "");
+  const etat = !c.actif ? { titre: "Je suis désactivé", cls: "border-slate-500/30 bg-slate-500/10", pastille: "bg-slate-400" }
+    : c.pause ? { titre: "Je suis en pause — rien ne part, je lis quand même les réponses", cls: "border-amber-500/40 bg-amber-500/10", pastille: "bg-amber-500" }
+    : b?.niveau === "pause_envois" ? { titre: "Quota n8n presque épuisé : j'ai mis les envois en pause", cls: "border-rose-500/40 bg-rose-500/10", pastille: "bg-rose-500" }
+    : auTravail ? { titre: `Je travaille${derniere ? " — " + derniere.charAt(0).toLowerCase() + derniere.slice(1) : ""}`, cls: "border-emerald-500/40 bg-emerald-500/10", pastille: "bg-emerald-500 animate-pulse" }
+    : { titre: `Je me repose — prochain passage à ${tab.prochain_passage ?? "—"}`, cls: "border-sky-500/40 bg-sky-500/10", pastille: "bg-sky-500" };
+  const santeQuota = b?.niveau === "pause_envois" ? "envois en pause" : b?.niveau === "reduit" ? "rythme réduit" : "tout va bien";
 
   const ent = tab.entonnoir;
   const etapes: [string, number][] = [["Entreprises", ent.entreprises], ["Qualifiées", ent.qualifiees], ["Contactées", ent.contactees], ["Réponses", ent.reponses], ["Rendez-vous", ent.rendez_vous]];
@@ -59,18 +70,26 @@ export default async function AgentPage() {
   return (
     <div className="mx-auto max-w-7xl">
       <RafraichirEnDirect />
-      <PageHeader title={<>Agent de <span className="text-warm">prospection</span></>}
-        subtitle="Il cherche, vérifie, écrit et relance. Toi, tu valides d'un clic." />
+      <PageHeader title={<>Mon agent de <span className="text-warm">prospection</span></>}
+        subtitle="Il cherche, vérifie, écrit et relance. Toi, tu valides d'un clic."
+        action={<span className={`rounded-full px-3 py-1.5 text-sm font-semibold ${c.simulation ? "bg-sky-500/15 text-sky-700 dark:text-sky-300" : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"}`}>
+          {c.simulation ? "🧪 Mode simulation — rien ne part" : "🟢 Mode réel — les messages validés partent"}
+        </span>} />
 
-      {/* 1. Bandeau d'état */}
-      <div className={`mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl px-4 py-3 ${etat.cls}`}>
-        <div>
-          <div className="font-semibold">{etat.txt}</div>
-          <div className="text-xs opacity-80">
-            Zones : {c.zones_actives.map((z) => ZONES[z]).join(", ")} · {tab.prets_pour_demain} message{tab.prets_pour_demain > 1 ? "s" : ""} prêt{tab.prets_pour_demain > 1 ? "s" : ""} pour demain
+      {/* 1. Bandeau d'état, à la première personne */}
+      <div className={`mb-4 flex flex-wrap items-center justify-between gap-4 rounded-2xl border px-5 py-4 ${etat.cls}`}>
+        <div className="flex min-w-0 flex-1 items-center gap-4">
+          <span className="relative grid size-16 shrink-0 place-items-center rounded-2xl bg-accent text-3xl">🤖
+            <span className={`absolute -right-1 -bottom-1 size-5 rounded-full border-2 border-bg ${etat.pastille}`} />
+          </span>
+          <div className="min-w-0">
+            <div className="text-lg leading-snug font-bold">{etat.titre}</div>
+            <div className="text-sm text-muted">
+              Prochain passage à {tab.prochain_passage ?? "—"} · zone : {c.zones_actives.map((z) => ZONES[z]).join(", ")} · {tab.prets_pour_demain} message{tab.prets_pour_demain > 1 ? "s" : ""} prêt{tab.prets_pour_demain > 1 ? "s" : ""} pour demain · quota n8n : {santeQuota}
+            </div>
           </div>
         </div>
-        <div className="flex flex-wrap items-start gap-2"><BoutonTester /><BoutonPause pause={c.pause} /><BoutonMode simulation={c.simulation} /></div>
+        <div className="flex flex-wrap items-start gap-2"><BoutonPause pause={c.pause} /><BoutonTester /><BoutonMode simulation={c.simulation} /></div>
       </div>
 
       {/* 4. Compteurs du jour et du mois */}
@@ -84,6 +103,9 @@ export default async function AgentPage() {
 
       <div className="grid gap-4 lg:grid-cols-[1fr_24rem]">
         <div className="flex min-w-0 flex-col gap-4">
+          {/* Ce que je fais en ce moment */}
+          <EnCeMoment initial={evts} fiches={(fiches ?? []) as { id: string; nom: string; metier: string | null; ville: string | null }[]} />
+
           {/* 3. Messages prêts */}
           <FileValidation messages={(msgs ?? []) as AgentMessage[]} />
 
@@ -134,11 +156,11 @@ export default async function AgentPage() {
 
         <div className="flex min-w-0 flex-col gap-4">
           {/* 2. Fil en direct */}
-          <FilDirect initial={(ev ?? []) as AgentEvent[]} />
+          <FilDirect initial={evts} titre="📜 Le fil de ma journée" />
 
           {/* 5. Jauge du quota n8n */}
           <div className="card p-4">
-            <div className="flex items-baseline justify-between text-sm"><span className="font-semibold">Quota n8n du mois</span><span className="tabular-nums">{b?.executions_mois ?? "—"} / {c.quota_mensuel}</span></div>
+            <div className="flex items-baseline justify-between text-sm"><span className="font-semibold">⛽ Mon carburant (quota n8n)</span><span className="tabular-nums">{b?.executions_mois ?? "—"} / {c.quota_mensuel}</span></div>
             <div className="relative mt-2 h-3 overflow-hidden rounded-full bg-soft-2">
               <div className={`h-full rounded-full ${pct >= 95 ? "bg-rose-500" : pct >= 80 ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${pct}%` }} />
               <div className="absolute top-0 h-full w-px bg-text/60" style={{ left: "80%" }} title="Cible : 80 %" />
@@ -153,7 +175,7 @@ export default async function AgentPage() {
 
           {/* 6. Entonnoir */}
           <div className="card p-4">
-            <div className="mb-2 text-sm font-semibold">Entonnoir</div>
+            <div className="mb-2 text-sm font-semibold">🏁 Entonnoir du mois</div>
             {etapes.map(([l, n], i) => (
               <div key={l} className="mb-1.5">
                 <div className="flex justify-between text-xs"><span>{l}</span><span className="tabular-nums">{n}</span></div>
@@ -202,6 +224,13 @@ export default async function AgentPage() {
           </label>
           <label className="flex flex-col gap-1">Adresse qui reçoit les alertes et le rapport
             <input className="input" name="alert_email" defaultValue={c.alert_email ?? ""} placeholder="ton adresse personnelle" />
+          </label>
+          <label className="flex flex-col gap-1 md:col-span-2">Mention STOP des SMS
+            <select className="input max-w-xl" name="sms_stop" defaultValue={c.sms_stop ?? "lien"}>
+              <option value="lien">Mon lien de désinscription (2 SMS facturés par message)</option>
+              <option value="brevo">« STOP au 36… » ajouté par Brevo (1 seul SMS facturé)</option>
+            </select>
+            <span className="text-xs text-muted">Choisis Brevo seulement après avoir vu « STOP au 36… » à la fin de ton SMS de test. Les STOP reçus par Brevo sont ajoutés chaque matin à la liste repoussoir.</span>
           </label>
           <label className="inline-flex items-center gap-2"><input type="checkbox" name="envoi_auto" defaultChecked={c.envoi_auto} />
             Envoi automatique (sans ta validation) — désactivé par défaut</label>

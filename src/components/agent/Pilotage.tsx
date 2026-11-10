@@ -5,8 +5,8 @@ import { marquerFait, mettreEnPause, passerEnReel, passerEnSimulation, testerUne
 export function BoutonPause({ pause }: { pause: boolean }) {
   const [pending, start] = useTransition();
   return (
-    <button className={pause ? "btn-primary" : "btn-ghost"} disabled={pending} onClick={() => start(() => mettreEnPause(!pause))}>
-      {pause ? "▶️ Reprendre" : "⏸️ Pause"}
+    <button className={`${pause ? "btn-primary" : "btn-ghost"} px-5 py-3 text-base`} disabled={pending} onClick={() => start(() => mettreEnPause(!pause))}>
+      {pause ? "▶️ Reprendre" : "⏸️ Mettre en pause"}
     </button>
   );
 }
@@ -15,12 +15,12 @@ export function BoutonMode({ simulation }: { simulation: boolean }) {
   const [pending, start] = useTransition();
   const [manque, setManque] = useState<string[] | null>(null);
   if (!simulation) {
-    return <button className="btn-ghost" disabled={pending}
+    return <button className="btn-ghost px-5 py-3 text-base" disabled={pending}
       onClick={() => { if (confirm("Revenir en simulation ? Plus aucun message ne partira.")) start(() => passerEnSimulation()); }}>🧪 Repasser en simulation</button>;
   }
   return (
     <span className="flex flex-col items-end gap-1">
-      <button className="btn-ghost" disabled={pending} onClick={() => {
+      <button className="btn-primary px-5 py-3 text-base" disabled={pending} onClick={() => {
         if (!confirm("Passer en réel ? Les messages validés partiront vraiment (10 par jour la première semaine).")) return;
         start(async () => { const r = await passerEnReel(); setManque(r.ok ? null : r.manque ?? ["réglage manquant"]); });
       }}>🚀 Passer en réel</button>
@@ -34,9 +34,10 @@ export function BoutonTester() {
   const [info, setInfo] = useState<string | null>(null);
   return (
     <span className="flex flex-col gap-1">
-      <button className="btn-ghost" disabled={pending} onClick={() => start(async () => {
+      <button className="btn-ghost px-5 py-3 text-base" disabled={pending} onClick={() => start(async () => {
         const r = await testerUneEntreprise();
-        setInfo(r.immediat ? "Test lancé : suis-le dans le fil en direct." : "Test demandé : il se fera au prochain passage de l'agent.");
+        setInfo(!r.ok ? (r.raison ?? "Test impossible pour l'instant.")
+          : r.immediat ? "Test lancé : regarde « Ce que je fais en ce moment »." : "Test demandé : il se fera au prochain passage de l'agent.");
       })}>🧪 Tester sur 1 entreprise</button>
       {info && <span className="text-xs text-muted">{info}</span>}
     </span>

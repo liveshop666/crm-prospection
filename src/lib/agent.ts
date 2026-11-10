@@ -62,6 +62,7 @@ export interface Tableau {
     envoi_auto: boolean; validation_obligatoire: boolean; horaires: { jours: number[]; plages: [string, string][] };
     email_expediteur: string | null; alert_email: string | null; lien_desinscription: string | null; quota_mensuel: number;
     test_demande: { entreprise_id: string } | null;
+    sms_stop?: "lien" | "brevo";
   };
   indicateurs: { part_sans_site: number | null; taux_desinscription: number | null };
 }

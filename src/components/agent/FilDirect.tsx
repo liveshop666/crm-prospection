@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/client";
  * Fil en direct : chaque ligne écrite par n8n dans agent_events apparaît ici en moins de 2 secondes
  * (Supabase Realtime), sans recharger la page. Les compteurs se rafraîchissent aussi.
  */
-export function FilDirect({ initial, entrepriseId, hauteur = "h-[28rem]" }: { initial: AgentEvent[]; entrepriseId?: string; hauteur?: string }) {
+export function FilDirect({ initial, entrepriseId, hauteur = "h-[28rem]", titre }: { initial: AgentEvent[]; entrepriseId?: string; hauteur?: string; titre?: string }) {
   const [events, setEvents] = useState<AgentEvent[]>(initial);
   const [connecte, setConnecte] = useState(false);
   const router = useRouter();
@@ -34,7 +34,7 @@ export function FilDirect({ initial, entrepriseId, hauteur = "h-[28rem]" }: { in
   return (
     <div className="card overflow-hidden">
       <div className="flex items-center justify-between border-b border-border px-4 py-2 text-xs text-muted">
-        <span>{entrepriseId ? "Ce que l'agent a fait" : "Fil en direct"}</span>
+        <span className={titre ? "text-sm font-semibold text-text" : ""}>{titre ?? (entrepriseId ? "Ce que l'agent a fait" : "Fil en direct")}</span>
         <span className="flex items-center gap-1.5">
           <span className={`size-2 rounded-full ${connecte ? "animate-pulse bg-emerald-500" : "bg-slate-400"}`} />
           {connecte ? "en direct" : "connexion…"}

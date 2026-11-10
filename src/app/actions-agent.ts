@@ -63,12 +63,14 @@ export async function passerEnSimulation() {
 
 export async function testerUneEntreprise() {
   const supabase = await db();
-  const { data } = await supabase.rpc("agent_demander_test", { p_entreprise: null });
-  const id = (data as { entreprise_id?: string } | null)?.entreprise_id;
+  const { data, error } = await supabase.rpc("agent_demander_test", { p_entreprise: null });
+  const d = data as { ok?: boolean; entreprise_id?: string; raison?: string } | null;
+  if (error || !d?.ok || !d.entreprise_id) return { ok: false, immediat: false, raison: d?.raison ?? error?.message ?? "Test impossible pour l'instant." };
+  const id = d.entreprise_id;
   // le workflow 2 démarre tout de suite si le webhook est branché, sinon au prochain passage
   const r = await callN8n("agent", { action: "tester", entreprise_id: id });
   fini();
-  return { ok: true, immediat: r.ok, entreprise_id: id };
+  return { ok: true, immediat: r.ok, entreprise_id: id, raison: undefined as string | undefined };
 }
 
 export async function enregistrerReglages(fd: FormData) {
@@ -87,6 +89,7 @@ export async function enregistrerReglages(fd: FormData) {
     validation_obligatoire: !envoiAuto,
     email_expediteur: email("email_expediteur"),
     alert_email: email("alert_email"),
+    sms_stop: fd.get("sms_stop") === "brevo" ? "brevo" : "lien",
   }).eq("id", 1);
   fini();
 }
