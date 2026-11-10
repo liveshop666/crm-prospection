@@ -11,7 +11,7 @@ const GROUPS: { title?: string; links: L[] }[] = [
   { links: [
     { href: "/", label: "Accueil", icon: "🏠", badge: "unread" },
     { href: "/messages", label: "Messages", icon: "📬", badge: "messages" },
-    { href: "/agent", label: "Agent", icon: "🤖" },
+    { href: "/agent", label: "Agent de prospection", icon: "🤖" },
   ] },
   { title: "Prospection", links: [
     { href: "/pipeline", label: "Pipeline", icon: "📊" },

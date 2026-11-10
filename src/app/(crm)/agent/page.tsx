@@ -1,170 +1,221 @@
-import { cancelAgentTask, clearAgentTasks, saveAgentSettings, setAgentPaused } from "@/app/actions-workspace";
-import { ConfirmButton } from "@/components/client";
-import { RowMenu } from "@/components/RowMenu";
-import { Empty, PageHeader, ProspectLine, SetupNotice, Stat } from "@/components/ui";
-import { AgentTaskForm } from "@/components/workspace";
-import { TASK_STATUS, TASK_TYPES } from "@/lib/constants";
-import { dateTime, timeAgo } from "@/lib/format";
-import { getSettings } from "@/lib/settings";
+import Link from "next/link";
+import { demandeRgpd, enregistrerReglages } from "@/app/actions-agent";
+import { FileValidation } from "@/components/agent/FileValidation";
+import { FilDirect, RafraichirEnDirect } from "@/components/agent/FilDirect";
+import { BoutonFait, BoutonMode, BoutonPause, BoutonTester } from "@/components/agent/Pilotage";
+import { CopyButton } from "@/components/client";
+import { PageHeader, Stat } from "@/components/ui";
+import { type AgentEvent, type AgentMessage, OFFRES, type Tableau, ZONES } from "@/lib/agent";
 import { createClient } from "@/lib/supabase/server";
-import type { AgentTask, Prospect } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-const INBOUND_SOURCES = ["manuel", "formulaire_site", "rdv_site", "entrant", "codeur", "fiverr", "malt", "comeup", "site"];
-
-function describe(t: AgentTask) {
-  const p = t.params as Record<string, unknown>;
-  const list = (v: unknown) => (Array.isArray(v) ? v.join(", ") : "");
-  if (t.type === "recherche") return `${list(p.sectors)} · ${list(p.cities)} · ${p.max ?? "?"} max${p.criteria ? ` · ${p.criteria}` : ""}`;
-  if (t.type === "envoi") return `${p.count} emails${p.sector ? ` · ${p.sector}` : ""}${p.city ? ` · ${p.city}` : ""}${p.min_score ? ` · score ≥ ${p.min_score}` : ""}`;
-  if (t.type === "relances") return `${p.count} relances max`;
-  return String(p.instruction ?? "");
-}
-
+/**
+ * Espace « Agent de prospection » : voir l'agent travailler en direct et le piloter sans ouvrir n8n.
+ * Les 8 zones du cahier des charges : bandeau d'état, fil en direct, messages prêts, compteurs,
+ * jauge du quota n8n, entonnoir, listes d'action, réglages.
+ */
 export default async function AgentPage() {
   const supabase = await createClient();
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const [{ data: tasks, error }, settings, { data: found }, { count: sentToday }, { count: toContact }, { count: dueFollowups }] = await Promise.all([
-    supabase.from("agent_tasks").select("*").order("created_at", { ascending: false }).limit(30),
-    getSettings(supabase),
-    supabase.from("prospects").select("*").not("source", "in", `(${INBOUND_SOURCES.join(",")})`).order("created_at", { ascending: false }).limit(10),
-    supabase.from("activities").select("id", { count: "exact", head: true }).in("type", ["email_sortant", "relance"]).eq("created_by", "n8n").gte("created_at", today.toISOString()),
-    supabase.from("prospects").select("id", { count: "exact", head: true }).eq("status", "nouveau").eq("opted_out", false).not("email", "is", null),
-    supabase.from("prospects").select("id", { count: "exact", head: true }).eq("opted_out", false).lte("next_followup_at", new Date().toISOString()),
+  const [{ data: t, error }, { data: ev }, { data: msgs }, { data: actions }, { data: chauds }] = await Promise.all([
+    supabase.rpc("agent_tableau"),
+    supabase.from("agent_events").select("id, created_at, entreprise_id, etape, phrase, niveau").order("id", { ascending: false }).limit(80),
+    supabase.from("agent_messages").select("*, agent_entreprises(*)").in("statut", ["a_valider", "valide"]).in("canal", ["email", "sms"])
+      .order("statut").order("created_at").limit(60),
+    supabase.from("agent_messages").select("id, canal, texte_propose, statut, agent_entreprises(nom, metier, ville, telephone, linkedin_url, prospect_id, score)")
+      .eq("statut", "a_faire").order("created_at", { ascending: false }).limit(40),
+    supabase.from("agent_entreprises").select("id, nom, metier, ville, telephone, prospect_id, reponse_at").eq("statut", "chaud").order("reponse_at", { ascending: false }).limit(20),
   ]);
-  if (error) return <SetupNotice title="Agent" />;
-  const list = (tasks ?? []) as AgentTask[];
-  const prospects = (found ?? []) as Prospect[];
-  const foundToday = prospects.filter((p) => new Date(p.created_at) >= today).length;
-  const webhook = !!process.env.N8N_AGENT_WEBHOOK_URL;
+
+  if (error || !t) {
+    return (
+      <div className="mx-auto max-w-3xl">
+        <PageHeader title={<>Agent de <span className="text-warm">prospection</span></>} />
+        <div className="card p-5 text-sm">
+          L&apos;espace de l&apos;agent n&apos;est pas encore installé dans la base : lance les fichiers <code>agent/supabase/0004</code> à <code>0008</code>
+          (dépôt <code>agent-de-solvelab</code>) dans Supabase → SQL Editor. {error?.message}
+        </div>
+      </div>
+    );
+  }
+  const tab = t as Tableau;
+  const c = tab.config;
+  const b = tab.budget;
+  const pct = Math.min(100, Math.round(b?.details?.pct_utilise ?? (b ? (100 * b.executions_mois) / c.quota_mensuel : 0)));
+  type Action = { id: string; canal: string; texte_propose: string; agent_entreprises: { nom: string; metier: string | null; ville: string | null; telephone: string | null; linkedin_url: string | null; prospect_id: string | null; score: number | null } | null };
+  const liste = (actions ?? []) as unknown as Action[];
+  const aAppeler = liste.filter((a) => a.canal === "appel");
+  const linkedin = liste.filter((a) => a.canal === "linkedin");
+
+  const etat = !c.actif ? { txt: "Désactivé", cls: "bg-slate-500/15" }
+    : c.pause ? { txt: "⏸️ En pause", cls: "bg-amber-500/15 text-amber-700 dark:text-amber-300" }
+    : b?.niveau === "pause_envois" ? { txt: "⚠️ Quota surveillé : envois en pause", cls: "bg-rose-500/15 text-rose-700 dark:text-rose-300" }
+    : c.simulation ? { txt: `🧪 Simulation — prochain passage à ${tab.prochain_passage ?? "—"}`, cls: "bg-sky-500/15 text-sky-700 dark:text-sky-300" }
+    : { txt: `🟢 Actif — prochain passage à ${tab.prochain_passage ?? "—"}`, cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" };
+
+  const ent = tab.entonnoir;
+  const etapes: [string, number][] = [["Entreprises", ent.entreprises], ["Qualifiées", ent.qualifiees], ["Contactées", ent.contactees], ["Réponses", ent.reponses], ["Rendez-vous", ent.rendez_vous]];
 
   return (
-    <div className="mx-auto max-w-6xl">
-      <PageHeader title={<>Mon <span className="text-warm">agent</span></>}
-        subtitle="Tu lui donnes un ordre ici, il travaille dans n8n, et tout revient dans le CRM."
-        action={
-          <form action={setAgentPaused.bind(null, !settings.agent_paused)}>
-            <button className={settings.agent_paused ? "btn-primary" : "btn-ghost"}>{settings.agent_paused ? "▶️ Relancer l'agent" : "⏸️ Mettre en pause"}</button>
-          </form>
-        } />
+    <div className="mx-auto max-w-7xl">
+      <RafraichirEnDirect />
+      <PageHeader title={<>Agent de <span className="text-warm">prospection</span></>}
+        subtitle="Il cherche, vérifie, écrit et relance. Toi, tu valides d'un clic." />
 
-      <div className={`mb-4 rounded-lg px-4 py-3 text-sm ${settings.agent_paused ? "bg-amber-500/10 text-amber-700 dark:text-amber-300" : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"}`}>
-        {settings.agent_paused ? "⏸️ L'agent est en pause : il ne cherche plus et n'envoie plus rien." : "🟢 L'agent est actif : recherche chaque matin, emails du lundi au vendredi entre 9 h et 18 h."}
-        {!webhook && <span className="block text-xs opacity-80">Webhook de l&apos;agent pas encore branché : tes ordres attendent qu&apos;il passe les chercher (voir n8n/README.md).</span>}
+      {/* 1. Bandeau d'état */}
+      <div className={`mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl px-4 py-3 ${etat.cls}`}>
+        <div>
+          <div className="font-semibold">{etat.txt}</div>
+          <div className="text-xs opacity-80">
+            Zones : {c.zones_actives.map((z) => ZONES[z]).join(", ")} · {tab.prets_pour_demain} message{tab.prets_pour_demain > 1 ? "s" : ""} prêt{tab.prets_pour_demain > 1 ? "s" : ""} pour demain
+          </div>
+        </div>
+        <div className="flex flex-wrap items-start gap-2"><BoutonTester /><BoutonPause pause={c.pause} /><BoutonMode simulation={c.simulation} /></div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Trouvés aujourd'hui" value={foundToday} hint="nouvelles entreprises" />
-        <Stat label="Emails envoyés aujourd'hui" value={sentToday ?? 0} hint={`limite ${settings.daily_email_limit} / jour`} />
-        <Stat label="À contacter" value={toContact ?? 0} hint="fiches « Nouveau » avec un email" />
-        <Stat label="Relances prévues" value={dueFollowups ?? 0} hint="à envoyer maintenant" />
+      {/* 4. Compteurs du jour et du mois */}
+      <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-5">
+        <Stat label="Vérifiées" value={tab.jour.verifiees} hint={`${tab.mois.verifiees} ce mois`} />
+        <Stat label="Nouvelles trouvées" value={tab.jour.nouvelles} hint={`${tab.mois.nouvelles} ce mois`} />
+        <Stat label={c.simulation ? "Envois simulés" : "Messages envoyés"} value={tab.jour.envoyes} hint={`${tab.mois.envoyes} ce mois`} />
+        <Stat label="Réponses" value={tab.jour.reponses} hint={`${tab.mois.reponses} ce mois`} />
+        <Stat label="Intéressés" value={tab.jour.chauds} hint={`${tab.mois.chauds} ce mois`} />
       </div>
 
-      <h2 className="mt-8 mb-3 text-sm font-semibold">Donner un ordre</h2>
-      <div className="grid gap-4 md:grid-cols-2">
-        <section className="card p-4">
-          <h3 className="mb-3 font-semibold">🔎 Chercher des entreprises</h3>
-          <AgentTaskForm type="recherche" button="Lancer la recherche">
-            <label className="block"><span className="label">Métiers (séparés par des virgules)</span>
-              <input name="sectors" required defaultValue={settings.target_sectors.join(", ")} placeholder="plombier, électricien, restaurant" className="input" /></label>
-            <label className="block"><span className="label">Villes</span>
-              <input name="cities" required defaultValue={settings.target_cities.join(", ")} placeholder="Caen, Hérouville-Saint-Clair, Ifs" className="input" /></label>
-            <div className="grid grid-cols-2 gap-2">
-              <label className="block"><span className="label">Nombre max</span>
-                <input name="max" type="number" min={1} max={200} defaultValue={30} className="input" /></label>
-              <label className="block"><span className="label">Critère (facultatif)</span>
-                <input name="criteria" placeholder="sans site, site vieux…" className="input" /></label>
+      <div className="grid gap-4 lg:grid-cols-[1fr_24rem]">
+        <div className="flex min-w-0 flex-col gap-4">
+          {/* 3. Messages prêts */}
+          <FileValidation messages={(msgs ?? []) as AgentMessage[]} />
+
+          {/* 7. Listes d'action */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="card overflow-hidden">
+              <div className="border-b border-border px-4 py-2 text-sm font-semibold">🔥 Prospects chauds à rappeler</div>
+              <ul className="max-h-72 divide-y divide-border overflow-y-auto text-sm">
+                {(chauds ?? []).length === 0 && <li className="px-4 py-6 text-center text-xs text-muted">Personne pour l&apos;instant.</li>}
+                {(chauds ?? []).map((p) => (
+                  <li key={p.id} className="px-4 py-2">
+                    {p.prospect_id ? <Link className="font-medium hover:underline" href={`/prospects/${p.prospect_id}`}>{p.nom}</Link> : <span className="font-medium">{p.nom}</span>}
+                    <div className="text-xs text-muted">{[p.metier, p.ville].filter(Boolean).join(" · ")}</div>
+                    {p.telephone && <a className="text-xs text-cyan" href={`tel:${p.telephone}`}>📞 Appeler</a>}
+                  </li>
+                ))}
+              </ul>
             </div>
-          </AgentTaskForm>
-        </section>
-
-        <section className="card p-4">
-          <h3 className="mb-3 font-semibold">✉️ Envoyer les premiers emails</h3>
-          <AgentTaskForm type="envoi" button="Lancer les emails">
-            <p className="text-xs text-muted">L&apos;agent prend les fiches « Nouveau » qui ont un email, écrit un message personnalisé avec leur lien, et les envoie étalés dans la journée (lun-ven, 9 h-18 h).</p>
-            <div className="grid grid-cols-2 gap-2">
-              <label className="block"><span className="label">Combien</span>
-                <input name="count" type="number" min={1} max={100} defaultValue={Math.min(20, settings.daily_email_limit || 20)} className="input" /></label>
-              <label className="block"><span className="label">Score minimum</span>
-                <input name="min_score" type="number" min={0} max={100} defaultValue={50} className="input" /></label>
-              <label className="block"><span className="label">Métier (facultatif)</span>
-                <input name="sector" placeholder="tous" className="input" /></label>
-              <label className="block"><span className="label">Ville (facultatif)</span>
-                <input name="city" placeholder="toutes" className="input" /></label>
+            <div className="card overflow-hidden">
+              <div className="border-b border-border px-4 py-2 text-sm font-semibold">📞 À appeler <span className="font-normal text-muted">(ni e-mail ni mobile)</span></div>
+              <ul className="max-h-72 divide-y divide-border overflow-y-auto text-sm">
+                {aAppeler.length === 0 && <li className="px-4 py-6 text-center text-xs text-muted">Rien à appeler.</li>}
+                {aAppeler.map((a) => (
+                  <li key={a.id} className="px-4 py-2">
+                    <div className="flex items-center justify-between gap-2"><span className="font-medium">{a.agent_entreprises?.nom}</span><BoutonFait id={a.id} /></div>
+                    <div className="text-xs text-muted">{[a.agent_entreprises?.metier, a.agent_entreprises?.ville].filter(Boolean).join(" · ")}</div>
+                    {a.agent_entreprises?.telephone && <a className="text-xs text-cyan" href={`tel:${a.agent_entreprises.telephone}`}>📞 Appeler</a>}
+                    <details className="mt-1 text-xs"><summary className="cursor-pointer text-muted">Quoi dire</summary><p className="mt-1">{a.texte_propose}</p></details>
+                  </li>
+                ))}
+              </ul>
             </div>
-          </AgentTaskForm>
-        </section>
+            <div className="card overflow-hidden">
+              <div className="border-b border-border px-4 py-2 text-sm font-semibold">💼 À contacter sur LinkedIn <span className="font-normal text-muted">(par toi)</span></div>
+              <ul className="max-h-72 divide-y divide-border overflow-y-auto text-sm">
+                {linkedin.length === 0 && <li className="px-4 py-6 text-center text-xs text-muted">Aucun profil repéré.</li>}
+                {linkedin.map((a) => (
+                  <li key={a.id} className="px-4 py-2">
+                    <div className="flex items-center justify-between gap-2"><span className="font-medium">{a.agent_entreprises?.nom}</span><BoutonFait id={a.id} /></div>
+                    {a.agent_entreprises?.linkedin_url && <a className="text-xs text-cyan" href={a.agent_entreprises.linkedin_url} target="_blank" rel="noreferrer">Ouvrir le profil</a>}
+                    <div className="mt-1 flex items-center gap-2 text-xs"><span className="line-clamp-2 text-muted">{a.texte_propose}</span><CopyButton text={a.texte_propose} label="Copier" /></div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
 
-        <section className="card p-4">
-          <h3 className="mb-3 font-semibold">🔁 Envoyer les relances</h3>
-          <AgentTaskForm type="relances" button="Lancer les relances">
-            <p className="text-xs text-muted">Une ou deux relances douces maximum, puis l&apos;agent arrête. Jamais à ceux qui ont répondu ou dit STOP.</p>
-            <label className="block"><span className="label">Combien au maximum</span>
-              <input name="count" type="number" min={1} max={100} defaultValue={20} className="input" /></label>
-          </AgentTaskForm>
-        </section>
+        <div className="flex min-w-0 flex-col gap-4">
+          {/* 2. Fil en direct */}
+          <FilDirect initial={(ev ?? []) as AgentEvent[]} />
 
-        <section className="card p-4">
-          <h3 className="mb-3 font-semibold">💬 Consigne libre</h3>
-          <AgentTaskForm type="consigne" button="Envoyer la consigne">
-            <textarea name="instruction" rows={4} required placeholder="Ex : trouve-moi les garages de Bayeux qui n'ont pas de site, et prépare-moi une liste." className="input" />
-          </AgentTaskForm>
-        </section>
-      </div>
+          {/* 5. Jauge du quota n8n */}
+          <div className="card p-4">
+            <div className="flex items-baseline justify-between text-sm"><span className="font-semibold">Quota n8n du mois</span><span className="tabular-nums">{b?.executions_mois ?? "—"} / {c.quota_mensuel}</span></div>
+            <div className="relative mt-2 h-3 overflow-hidden rounded-full bg-soft-2">
+              <div className={`h-full rounded-full ${pct >= 95 ? "bg-rose-500" : pct >= 80 ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${pct}%` }} />
+              <div className="absolute top-0 h-full w-px bg-text/60" style={{ left: "80%" }} title="Cible : 80 %" />
+            </div>
+            <div className="mt-2 grid grid-cols-2 gap-1 text-xs text-muted">
+              <span>Budget du jour : <b className="text-text">{b?.budget_jour ?? "—"}</b></span>
+              <span>Messages demain : <b className="text-text">{b?.messages_demain ?? "—"}</b></span>
+              <span>Épuisement prévu : <b className="text-text">{b?.epuisement_prevu ? new Date(b.epuisement_prevu).toLocaleDateString("fr-FR") : "—"}</b></span>
+              <span>Compteur : {b?.source_compteur === "api_n8n" ? "n8n (réel)" : "estimé"}</span>
+            </div>
+          </div>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-2">
-        <section className="card overflow-hidden">
-          <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <h2 className="text-sm font-semibold">📋 Ordres donnés</h2>
-            {list.some((t) => ["termine", "erreur", "annule"].includes(t.status)) && (
-              <form action={clearAgentTasks}>
-                <ConfirmButton className="text-xs text-muted underline hover:text-text" message="Vider l'historique des ordres terminés, en erreur ou annulés ? Les ordres en attente restent.">🗑️ Vider l&apos;historique</ConfirmButton>
-              </form>
+          {/* 6. Entonnoir */}
+          <div className="card p-4">
+            <div className="mb-2 text-sm font-semibold">Entonnoir</div>
+            {etapes.map(([l, n], i) => (
+              <div key={l} className="mb-1.5">
+                <div className="flex justify-between text-xs"><span>{l}</span><span className="tabular-nums">{n}</span></div>
+                <div className="h-2 rounded-full bg-soft-2"><div className="h-full rounded-full bg-chart-bar" style={{ width: `${Math.max(2, (100 * n) / Math.max(1, etapes[0][1]))}%`, opacity: 1 - i * 0.12 }} /></div>
+              </div>
+            ))}
+            <div className="mt-2 text-xs text-muted">
+              Sans site : <b className="text-text">{tab.indicateurs.part_sans_site ?? "—"} %</b> des fiches vérifiées · désinscriptions : <b className="text-text">{tab.indicateurs.taux_desinscription ?? 0} %</b>
+            </div>
+            {tab.mois.besoins && Object.keys(tab.mois.besoins).length > 0 && (
+              <div className="mt-2 text-xs text-muted">Besoins ce mois : {Object.entries(tab.mois.besoins).map(([k, v]) => `${OFFRES[k] ?? k} ${v}`).join(" · ")}</div>
             )}
           </div>
-          <ul className="divide-y divide-border">
-            {list.length === 0 ? <Empty>Aucun ordre pour l&apos;instant.</Empty> : list.map((t) => (
-              <li key={t.id} className="px-4 py-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-medium">{TASK_TYPES[t.type].emoji} {TASK_TYPES[t.type].label}</span>
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${TASK_STATUS[t.status].color}`}>{TASK_STATUS[t.status].label}</span>
-                  <span className="ml-auto text-xs text-muted" title={dateTime(t.created_at)}>{timeAgo(t.created_at)}</span>
-                  <RowMenu id={t.id} kind="task" />
-                </div>
-                <div className="mt-1 truncate text-xs text-muted">{describe(t)}</div>
-                {t.summary && <p className="mt-2 rounded-lg bg-soft p-2 text-sm whitespace-pre-line">{t.summary}</p>}
-                {t.error && t.status !== "termine" && <p className="mt-1 text-xs text-rose-600 dark:text-rose-300">{t.error}</p>}
-                {["en_attente", "envoye"].includes(t.status) && (
-                  <form action={cancelAgentTask.bind(null, t.id)} className="mt-1"><button className="text-xs text-muted underline hover:text-text">Annuler</button></form>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <section className="card overflow-hidden">
-          <h2 className="border-b border-border px-4 py-3 text-sm font-semibold">🆕 Derniers prospects trouvés par l&apos;agent</h2>
-          <div className="divide-y divide-border">
-            {prospects.length ? prospects.map((p) => <ProspectLine key={p.id} p={p} />) : <Empty>L&apos;agent n&apos;a encore rien trouvé.</Empty>}
-          </div>
-        </section>
+        </div>
       </div>
 
-      <details className="card mt-6 p-4">
-        <summary className="cursor-pointer text-sm font-semibold">⚙️ Réglages de l&apos;agent</summary>
-        <form action={saveAgentSettings} className="mt-4 grid gap-3 sm:grid-cols-2">
-          <label className="block sm:col-span-2"><span className="label">Métiers ciblés chaque matin (séparés par des virgules)</span>
-            <textarea name="target_sectors" rows={2} defaultValue={settings.target_sectors.join(", ")} placeholder="plombier, électricien, menuisier, restaurant, coiffeur" className="input" /></label>
-          <label className="block sm:col-span-2"><span className="label">Villes ciblées</span>
-            <textarea name="target_cities" rows={2} defaultValue={settings.target_cities.join(", ")} placeholder="Caen, Hérouville-Saint-Clair, Mondeville, Ifs" className="input" /></label>
-          <label className="block"><span className="label">Premiers emails par jour (max)</span>
-            <input name="daily_email_limit" type="number" min={0} max={300} defaultValue={settings.daily_email_limit} className="input" /></label>
-          <label className="block"><span className="label">Prénom pour signer les emails de l&apos;agent</span>
-            <input name="sender_first_name" defaultValue={settings.sender_first_name} className="input" /></label>
-          <label className="block sm:col-span-2"><span className="label">Signature des emails que tu écris dans le CRM</span>
-            <textarea name="signature" rows={3} defaultValue={settings.signature} className="input" /></label>
-          <div className="sm:col-span-2"><button className="btn-primary">Enregistrer</button></div>
+      {/* 8. Réglages */}
+      <details className="card mt-4 p-4">
+        <summary className="cursor-pointer font-semibold">⚙️ Réglages de l&apos;agent</summary>
+        <form action={enregistrerReglages} className="mt-4 grid gap-4 text-sm md:grid-cols-2">
+          <fieldset>
+            <legend className="mb-1 font-medium">Zones actives</legend>
+            {[1, 2, 3].map((z) => (
+              <label key={z} className="mr-4 inline-flex items-center gap-1"><input type="checkbox" name={`zone_${z}`} defaultChecked={c.zones_actives.includes(z)} /> {ZONES[z]}</label>
+            ))}
+            <p className="text-xs text-muted">L&apos;agent passe tout seul à la zone suivante quand la zone en cours est épuisée.</p>
+          </fieldset>
+          <fieldset>
+            <legend className="mb-1 font-medium">Jours d&apos;envoi</legend>
+            {["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"].map((j, i) => (
+              <label key={j} className="mr-3 inline-flex items-center gap-1"><input type="checkbox" name={`jour_${i + 1}`} defaultChecked={c.horaires.jours.includes(i + 1)} /> {j}</label>
+            ))}
+            <p className="text-xs text-muted">Jamais les jours fériés.</p>
+          </fieldset>
+          <label className="flex flex-col gap-1">Horaires (matin / après-midi)
+            <span className="flex gap-2">
+              <input className="input w-24" name="m1" defaultValue={c.horaires.plages[0]?.[0]} /> <input className="input w-24" name="m2" defaultValue={c.horaires.plages[0]?.[1]} />
+              <input className="input w-24" name="a1" defaultValue={c.horaires.plages[1]?.[0]} /> <input className="input w-24" name="a2" defaultValue={c.horaires.plages[1]?.[1]} />
+            </span>
+          </label>
+          <label className="flex flex-col gap-1">Seuil de score (0 à 100)
+            <input className="input w-28" type="number" min={0} max={100} name="seuil_score" defaultValue={c.seuil_score} />
+          </label>
+          <label className="flex flex-col gap-1">Adresse d&apos;envoi (domaine secondaire, jamais @solvelab.fr)
+            <input className="input" name="email_expediteur" defaultValue={c.email_expediteur ?? ""} placeholder="rudy@solvelab-studio.fr" />
+          </label>
+          <label className="flex flex-col gap-1">Adresse qui reçoit les alertes et le rapport
+            <input className="input" name="alert_email" defaultValue={c.alert_email ?? ""} placeholder="ton adresse personnelle" />
+          </label>
+          <label className="inline-flex items-center gap-2"><input type="checkbox" name="envoi_auto" defaultChecked={c.envoi_auto} />
+            Envoi automatique (sans ta validation) — désactivé par défaut</label>
+          <div className="md:col-span-2"><button className="btn-primary">Enregistrer les réglages</button></div>
+        </form>
+
+        <form action={async (fd) => { "use server"; await demandeRgpd(fd); }} className="mt-6 border-t border-border pt-4 text-sm">
+          <div className="mb-2 font-medium">Demande RGPD (accès ou suppression, à traiter sous un mois)</div>
+          <div className="flex flex-wrap gap-2">
+            <input className="input max-w-xs" name="valeur" placeholder="e-mail ou téléphone de la personne" />
+            <select className="input w-auto" name="action"><option value="acces">Accès</option><option value="suppression">Suppression</option></select>
+            <button className="btn-ghost">Traiter</button>
+          </div>
+          <p className="mt-1 text-xs text-muted">Une suppression efface la fiche et ajoute le contact à la liste repoussoir. Le résultat s&apos;affiche dans le fil.</p>
         </form>
       </details>
     </div>

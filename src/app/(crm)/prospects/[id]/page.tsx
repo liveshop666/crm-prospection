@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { addNote, createOffer, deleteOffer, deleteProspect, markOfferSent, setOptOut, updateProspect } from "@/app/actions";
 import { createSubscription, deleteSubscription, markOfferAccepted, setOfferPayment, setSubscriptionStatus } from "@/app/actions-workspace";
+import { AgentFiche } from "@/components/agent/AgentFiche";
 import { ConfirmButton, CopyButton, MarkRead, StatusSelect } from "@/components/client";
 import { RowMenu } from "@/components/RowMenu";
 import { ProspectFields } from "@/components/ProspectFields";
@@ -267,6 +268,7 @@ export default async function ProspectPage({ params, searchParams }: { params: P
           </details>
         </div>
       </div>
+    <AgentFiche prospectId={prospect.id} />
     </div>
   );
 }

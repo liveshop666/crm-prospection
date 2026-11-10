@@ -1,0 +1,103 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { callN8n } from "@/lib/n8n";
+import { createClient } from "@/lib/supabase/server";
+
+/** Actions de l'espace « Agent de prospection ». Tout passe par les fonctions Supabase de l'agent. */
+async function db() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Non connecté");
+  return supabase;
+}
+
+const fini = () => revalidatePath("/agent");
+
+export async function validerMessage(id: string, texte?: string, objet?: string) {
+  const supabase = await db();
+  const { data, error } = await supabase.rpc("agent_valider_message", { p_id: id, p_texte: texte ?? null, p_objet: objet ?? null });
+  if (error) return { ok: false, erreur: error.message };
+  fini();
+  const r = data as { ok: boolean; controles?: { bloquants?: string[] } };
+  return { ok: r.ok, erreur: r.ok ? undefined : (r.controles?.bloquants ?? ["message non modifiable"]).join(", ") };
+}
+
+export async function ecarterMessage(id: string) {
+  const supabase = await db();
+  await supabase.rpc("agent_ecarter_message", { p_id: id });
+  fini();
+}
+
+export async function toutValider() {
+  const supabase = await db();
+  await supabase.rpc("agent_tout_valider");
+  fini();
+}
+
+export async function marquerFait(id: string) {
+  const supabase = await db();
+  await supabase.from("agent_messages").update({ statut: "fait" }).eq("id", id).eq("statut", "a_faire");
+  fini();
+}
+
+export async function mettreEnPause(pause: boolean) {
+  const supabase = await db();
+  await supabase.rpc("agent_mettre_en_pause", { p_pause: pause, p_raison: pause ? "demandée depuis le CRM" : null });
+  fini();
+}
+
+export async function passerEnReel() {
+  const supabase = await db();
+  const { data, error } = await supabase.rpc("agent_passer_en_reel");
+  fini();
+  if (error) return { ok: false, manque: [error.message] };
+  return data as { ok: boolean; manque?: string[] };
+}
+
+export async function passerEnSimulation() {
+  const supabase = await db();
+  await supabase.rpc("agent_passer_en_simulation");
+  fini();
+}
+
+export async function testerUneEntreprise() {
+  const supabase = await db();
+  const { data } = await supabase.rpc("agent_demander_test", { p_entreprise: null });
+  const id = (data as { entreprise_id?: string } | null)?.entreprise_id;
+  // le workflow 2 démarre tout de suite si le webhook est branché, sinon au prochain passage
+  const r = await callN8n("agent", { action: "tester", entreprise_id: id });
+  fini();
+  return { ok: true, immediat: r.ok, entreprise_id: id };
+}
+
+export async function enregistrerReglages(fd: FormData) {
+  const supabase = await db();
+  const zones = [1, 2, 3].filter((z) => fd.get(`zone_${z}`) === "on");
+  const jours = [1, 2, 3, 4, 5, 6, 7].filter((j) => fd.get(`jour_${j}`) === "on");
+  const plage = (k: string, d: string) => (/^\d{2}:\d{2}$/.test(String(fd.get(k) ?? "")) ? String(fd.get(k)) : d);
+  const seuil = Math.min(100, Math.max(0, Number(fd.get("seuil_score") ?? 60) || 60));
+  const email = (k: string) => { const v = String(fd.get(k) ?? "").trim().toLowerCase(); return /^[^@\s]+@[^@\s]+\.[a-z]{2,}$/.test(v) ? v : null; };
+  const envoiAuto = fd.get("envoi_auto") === "on";
+  await supabase.from("config_agent").update({
+    zones_actives: zones.length ? zones : [1],
+    horaires: { jours: jours.length ? jours : [1, 2, 3, 4, 5], plages: [[plage("m1", "09:00"), plage("m2", "12:00")], [plage("a1", "14:00"), plage("a2", "17:30")]] },
+    seuil_score: seuil,
+    envoi_auto: envoiAuto,
+    validation_obligatoire: !envoiAuto,
+    email_expediteur: email("email_expediteur"),
+    alert_email: email("alert_email"),
+  }).eq("id", 1);
+  fini();
+}
+
+/** Demande d'accès ou de suppression (RGPD), traitée sous un mois. */
+export async function demandeRgpd(fd: FormData) {
+  const supabase = await db();
+  const valeur = String(fd.get("valeur") ?? "").trim();
+  const action = fd.get("action") === "suppression" ? "suppression" : "acces";
+  if (!valeur) return { ok: false };
+  const { data } = await supabase.rpc("agent_demande_rgpd", { p_valeur: valeur, p_action: action });
+  fini();
+  return data as { ok: boolean; supprimees?: number; donnees?: unknown[] };
+}
