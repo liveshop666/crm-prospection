@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { corsHeaders } from "@/lib/api";
 import { findProspect, logActivity, upsertProspect } from "@/lib/crm";
 import { ingestMessage } from "@/lib/messages";
-import { isSuspicious, spamReasons } from "@/lib/spam";
+import { spamReasons, spamVerdict } from "@/lib/spam";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /** Redirection après envoi du formulaire : uniquement vers ton propre site (pas de redirection ouverte). */
@@ -48,15 +48,16 @@ export async function POST(req: NextRequest) {
       b.message && clip(b.message),
     ].filter(Boolean);
 
-    // Filtre anti-spam : une demande douteuse ne crée pas de fiche, elle part dans Messages → « À vérifier »
+    // Filtre anti-spam : spam évident → Messages → Spam, doute → « À vérifier ». Aucune fiche n'est créée.
     const reasons = spamReasons({ name: b.name, company: b.company, email: b.email, message: b.message });
+    const verdict = spamVerdict(reasons);
     let filed = false;
-    if (isSuspicious(reasons)) try {
+    if (verdict !== "ok") try {
       await ingestMessage(db, {
-        source: "site", category: "client", verdict: "a_verifier",
+        source: "site", category: "client", verdict,
         from_email: clip(b.email, 200), from_name: clip(b.name, 200) ?? clip(b.company, 200),
         subject: "Demande via le formulaire du site", body: lines.join("\n") || "Demande de contact",
-        ai_summary: `Filtre anti-spam : ${reasons.join(", ")}`,
+        ai_summary: `${verdict === "spam" ? "Spam probable" : "À vérifier"} : ${reasons.join(", ")}`,
         lead: { company_name: clip(b.company, 200), contact_name: clip(b.name, 200), email: clip(b.email, 200), phone: clip(b.phone, 30), interest: clip(b.interest, 200), budget: clip(b.budget, 100) },
         metadata: { page: req.headers.get("referer"), spam_reasons: reasons },
       });

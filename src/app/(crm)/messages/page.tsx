@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { clearMessages } from "@/app/actions-workspace";
+import { ConfirmButton } from "@/components/client";
+import { RowMenu } from "@/components/RowMenu";
 import { Empty, PageHeader, Pill, SetupNotice, SourceBadge } from "@/components/ui";
 import { timeAgo } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
@@ -71,12 +74,20 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
         <button className="btn-ghost">Rechercher</button>
       </form>
 
-      <p className="mb-2 text-xs text-muted">{current.icon} {current.hint}</p>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-muted">{current.icon} {current.hint}</p>
+        {rows.length > 0 && (
+          <form action={clearMessages.bind(null, tab)}>
+            <ConfirmButton message={`Supprimer TOUS les messages de l'onglet « ${current.label} » ? Les fiches clients restent, et les emails restent dans ta boîte mail.`}>🗑️ Tout supprimer</ConfirmButton>
+          </form>
+        )}
+      </div>
       <div className="card divide-y divide-border overflow-hidden">
         {rows.length === 0 ? <Empty>Rien ici pour l&apos;instant.</Empty> : rows.map((m) => {
           const who = m.direction === "sortant" ? `À : ${m.to_email ?? "—"}` : (m.from_name || m.from_email || "Inconnu");
           return (
-            <Link key={m.id} href={`/messages/${m.id}`} className="flex items-start gap-3 px-4 py-3 hover:bg-soft">
+            <div key={m.id} className="flex items-start gap-1 pr-2 hover:bg-soft">
+            <Link href={`/messages/${m.id}`} className="flex min-w-0 flex-1 items-start gap-3 px-4 py-3">
               {!m.is_read ? <span className="mt-1.5 size-2 shrink-0 rounded-full bg-accent" /> : <span className="mt-1.5 size-2 shrink-0" />}
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -91,6 +102,8 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
               </div>
               <span className="shrink-0 text-xs text-muted">{timeAgo(m.received_at)}</span>
             </Link>
+            <div className="pt-2.5"><RowMenu id={m.id} kind="message" hasProspect={!!m.prospect_id} /></div>
+            </div>
           );
         })}
       </div>

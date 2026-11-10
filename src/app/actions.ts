@@ -143,6 +143,20 @@ export async function hideSiteEvent(id: string) {
   revalidatePath("/site");
 }
 
+/**
+ * Retire TOUTES les lignes de « Derniers passages » (ou seulement un type) SANS toucher aux chiffres :
+ * les lignes sont marquées masquées, comme pour le menu ⋯ d'une seule ligne.
+ */
+export async function hideAllSiteEvents(type?: string) {
+  await db();
+  const admin = createAdminClient();
+  let q = admin.from("site_events").update({ metadata: { hidden: true } }).filter("metadata->>hidden", "is", null);
+  if (type) q = q.eq("type", type);
+  const { error } = await q;
+  if (error) throw error;
+  revalidatePath("/site");
+}
+
 /** Supprime une ligne d'historique (accueil « Activité récente » ou fiche prospect). */
 export async function deleteActivity(id: string) {
   const supabase = await db();
