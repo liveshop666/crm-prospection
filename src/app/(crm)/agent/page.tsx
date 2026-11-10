@@ -3,7 +3,8 @@ import { demandeRgpd, enregistrerReglages } from "@/app/actions-agent";
 import { FileValidation } from "@/components/agent/FileValidation";
 import { EnCeMoment } from "@/components/agent/EnCeMoment";
 import { FilDirect, RafraichirEnDirect } from "@/components/agent/FilDirect";
-import { BoutonFait, BoutonMode, BoutonPause, BoutonTester } from "@/components/agent/Pilotage";
+import { EntreprisesAgent } from "@/components/agent/EntreprisesAgent";
+import { BoutonFait, BoutonMode, BoutonPause, BoutonSupprimer, BoutonTester } from "@/components/agent/Pilotage";
 import { CopyButton } from "@/components/client";
 import { PageHeader, Stat } from "@/components/ui";
 import { type AgentEvent, type AgentMessage, OFFRES, type Tableau, ZONES } from "@/lib/agent";
@@ -23,7 +24,7 @@ export default async function AgentPage() {
     supabase.from("agent_events").select("id, created_at, entreprise_id, etape, phrase, niveau").order("id", { ascending: false }).limit(80),
     supabase.from("agent_messages").select("*, agent_entreprises(*)").in("statut", ["a_valider", "valide"]).in("canal", ["email", "sms"])
       .order("statut").order("created_at").limit(60),
-    supabase.from("agent_messages").select("id, canal, texte_propose, statut, agent_entreprises(nom, metier, ville, telephone, linkedin_url, prospect_id, score)")
+    supabase.from("agent_messages").select("id, entreprise_id, canal, texte_propose, statut, agent_entreprises(nom, metier, ville, telephone, linkedin_url, prospect_id, score)")
       .eq("statut", "a_faire").order("created_at", { ascending: false }).limit(40),
     supabase.from("agent_entreprises").select("id, nom, metier, ville, telephone, prospect_id, reponse_at").eq("statut", "chaud").order("reponse_at", { ascending: false }).limit(20),
     supabase.from("agent_runs").select("workflow, statut, created_at").eq("statut", "en_cours").gte("created_at", new Date(Date.now() - 10 * 60e3).toISOString()).limit(1),
@@ -49,7 +50,7 @@ export default async function AgentPage() {
   const c = tab.config;
   const b = tab.budget;
   const pct = Math.min(100, Math.round(b?.details?.pct_utilise ?? (b ? (100 * b.executions_mois) / c.quota_mensuel : 0)));
-  type Action = { id: string; canal: string; texte_propose: string; agent_entreprises: { nom: string; metier: string | null; ville: string | null; telephone: string | null; linkedin_url: string | null; prospect_id: string | null; score: number | null } | null };
+  type Action = { id: string; entreprise_id: string; canal: string; texte_propose: string; agent_entreprises: { nom: string; metier: string | null; ville: string | null; telephone: string | null; linkedin_url: string | null; prospect_id: string | null; score: number | null } | null };
   const liste = (actions ?? []) as unknown as Action[];
   const aAppeler = liste.filter((a) => a.canal === "appel");
   const linkedin = liste.filter((a) => a.canal === "linkedin");
@@ -109,6 +110,9 @@ export default async function AgentPage() {
           {/* 3. Messages prêts */}
           <FileValidation messages={(msgs ?? []) as AgentMessage[]} />
 
+          {/* Toutes les entreprises trouvées par l'agent */}
+          <EntreprisesAgent />
+
           {/* 7. Listes d'action */}
           <div className="grid gap-4 md:grid-cols-3">
             <div className="card overflow-hidden">
@@ -119,7 +123,10 @@ export default async function AgentPage() {
                   <li key={p.id} className="px-4 py-2">
                     {p.prospect_id ? <Link className="font-medium hover:underline" href={`/prospects/${p.prospect_id}`}>{p.nom}</Link> : <span className="font-medium">{p.nom}</span>}
                     <div className="text-xs text-muted">{[p.metier, p.ville].filter(Boolean).join(" · ")}</div>
-                    {p.telephone && <a className="text-xs text-cyan" href={`tel:${p.telephone}`}>📞 Appeler</a>}
+                    <div className="flex items-center justify-between gap-2">
+                      {p.telephone ? <a className="text-xs text-cyan" href={`tel:${p.telephone}`}>📞 Appeler</a> : <span />}
+                      <BoutonSupprimer id={p.id} nom={p.nom} />
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -130,7 +137,7 @@ export default async function AgentPage() {
                 {aAppeler.length === 0 && <li className="px-4 py-6 text-center text-xs text-muted">Rien à appeler.</li>}
                 {aAppeler.map((a) => (
                   <li key={a.id} className="px-4 py-2">
-                    <div className="flex items-center justify-between gap-2"><span className="font-medium">{a.agent_entreprises?.nom}</span><BoutonFait id={a.id} /></div>
+                    <div className="flex items-center justify-between gap-2"><span className="font-medium">{a.agent_entreprises?.nom}</span><span className="flex gap-1"><BoutonFait id={a.id} /><BoutonSupprimer id={a.entreprise_id} nom={a.agent_entreprises?.nom ?? "cette entreprise"} /></span></div>
                     <div className="text-xs text-muted">{[a.agent_entreprises?.metier, a.agent_entreprises?.ville].filter(Boolean).join(" · ")}</div>
                     {a.agent_entreprises?.telephone && <a className="text-xs text-cyan" href={`tel:${a.agent_entreprises.telephone}`}>📞 Appeler</a>}
                     <details className="mt-1 text-xs"><summary className="cursor-pointer text-muted">Quoi dire</summary><p className="mt-1">{a.texte_propose}</p></details>
@@ -144,7 +151,7 @@ export default async function AgentPage() {
                 {linkedin.length === 0 && <li className="px-4 py-6 text-center text-xs text-muted">Aucun profil repéré.</li>}
                 {linkedin.map((a) => (
                   <li key={a.id} className="px-4 py-2">
-                    <div className="flex items-center justify-between gap-2"><span className="font-medium">{a.agent_entreprises?.nom}</span><BoutonFait id={a.id} /></div>
+                    <div className="flex items-center justify-between gap-2"><span className="font-medium">{a.agent_entreprises?.nom}</span><span className="flex gap-1"><BoutonFait id={a.id} /><BoutonSupprimer id={a.entreprise_id} nom={a.agent_entreprises?.nom ?? "cette entreprise"} /></span></div>
                     {a.agent_entreprises?.linkedin_url && <a className="text-xs text-cyan" href={a.agent_entreprises.linkedin_url} target="_blank" rel="noreferrer">Ouvrir le profil</a>}
                     <div className="mt-1 flex items-center gap-2 text-xs"><span className="line-clamp-2 text-muted">{a.texte_propose}</span><CopyButton text={a.texte_propose} label="Copier" /></div>
                   </li>
@@ -192,49 +199,114 @@ export default async function AgentPage() {
         </div>
       </div>
 
-      {/* 8. Réglages */}
+      {/* 8. Réglages : tout se pilote d'ici */}
       <details className="card mt-4 p-4">
-        <summary className="cursor-pointer font-semibold">⚙️ Réglages de l&apos;agent</summary>
-        <form action={enregistrerReglages} className="mt-4 grid gap-4 text-sm md:grid-cols-2">
-          <fieldset>
-            <legend className="mb-1 font-medium">Zones actives</legend>
-            {[1, 2, 3].map((z) => (
-              <label key={z} className="mr-4 inline-flex items-center gap-1"><input type="checkbox" name={`zone_${z}`} defaultChecked={c.zones_actives.includes(z)} /> {ZONES[z]}</label>
-            ))}
-            <p className="text-xs text-muted">L&apos;agent passe tout seul à la zone suivante quand la zone en cours est épuisée.</p>
-          </fieldset>
-          <fieldset>
-            <legend className="mb-1 font-medium">Jours d&apos;envoi</legend>
-            {["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"].map((j, i) => (
-              <label key={j} className="mr-3 inline-flex items-center gap-1"><input type="checkbox" name={`jour_${i + 1}`} defaultChecked={c.horaires.jours.includes(i + 1)} /> {j}</label>
-            ))}
-            <p className="text-xs text-muted">Jamais les jours fériés.</p>
-          </fieldset>
-          <label className="flex flex-col gap-1">Horaires (matin / après-midi)
-            <span className="flex gap-2">
-              <input className="input w-24" name="m1" defaultValue={c.horaires.plages[0]?.[0]} /> <input className="input w-24" name="m2" defaultValue={c.horaires.plages[0]?.[1]} />
-              <input className="input w-24" name="a1" defaultValue={c.horaires.plages[1]?.[0]} /> <input className="input w-24" name="a2" defaultValue={c.horaires.plages[1]?.[1]} />
-            </span>
-          </label>
-          <label className="flex flex-col gap-1">Seuil de score (0 à 100)
-            <input className="input w-28" type="number" min={0} max={100} name="seuil_score" defaultValue={c.seuil_score} />
-          </label>
-          <label className="flex flex-col gap-1">Adresse d&apos;envoi (domaine secondaire, jamais @solvelab.fr)
-            <input className="input" name="email_expediteur" defaultValue={c.email_expediteur ?? ""} placeholder="rudy@solvelab-studio.fr" />
-          </label>
-          <label className="flex flex-col gap-1">Adresse qui reçoit les alertes et le rapport
-            <input className="input" name="alert_email" defaultValue={c.alert_email ?? ""} placeholder="ton adresse personnelle" />
-          </label>
-          <label className="flex flex-col gap-1 md:col-span-2">Mention STOP des SMS
-            <select className="input max-w-xl" name="sms_stop" defaultValue={c.sms_stop ?? "lien"}>
-              <option value="lien">Mon lien de désinscription (2 SMS facturés par message)</option>
-              <option value="brevo">« STOP au 36… » ajouté par Brevo (1 seul SMS facturé)</option>
-            </select>
-            <span className="text-xs text-muted">Choisis Brevo seulement après avoir vu « STOP au 36… » à la fin de ton SMS de test. Les STOP reçus par Brevo sont ajoutés chaque matin à la liste repoussoir.</span>
-          </label>
-          <label className="inline-flex items-center gap-2"><input type="checkbox" name="envoi_auto" defaultChecked={c.envoi_auto} />
-            Envoi automatique (sans ta validation) — désactivé par défaut</label>
-          <div className="md:col-span-2"><button className="btn-primary">Enregistrer les réglages</button></div>
+        <summary className="cursor-pointer text-lg font-semibold">⚙️ Réglages de l&apos;agent <span className="text-sm font-normal text-muted">— tout se pilote d&apos;ici, pris en compte au passage suivant</span></summary>
+        <form action={enregistrerReglages} className="mt-4 flex flex-col gap-6 text-sm">
+
+          <section className="grid gap-3">
+            <h3 className="font-semibold">🧠 Ce que l&apos;agent sait de SolveLab</h3>
+            <textarea className="input min-h-40 text-sm" name="presentation" defaultValue={c.presentation ?? ""} maxLength={3000} />
+            <p className="text-xs text-muted">Il s&apos;en sert pour comprendre qui tu es et choisir la bonne offre. Il ne cite qu&apos;une seule offre par message, celle qui répond au besoin trouvé.</p>
+            <h3 className="mt-2 font-semibold">💬 Tes consignes à l&apos;agent</h3>
+            <textarea className="input min-h-28 text-sm" name="consignes" defaultValue={c.consignes ?? ""} maxLength={3000}
+              placeholder={"Écris-lui comme à un collègue, une consigne par ligne. Exemples :\n- Propose toujours l'audit gratuit sur place pour les restaurants.\n- Ne parle pas de vidéo aux artisans du bâtiment.\n- Mentionne que je me déplace dans tout le Calvados."} />
+            <p className="text-xs text-muted">Ajoutées à ses instructions à chaque rédaction. Elles ne peuvent pas lever les 10 règles (vouvoiement, pas de prix, pas de mensonge, STOP…). Vérifie le résultat avec « Tester sur 1 entreprise ».</p>
+          </section>
+
+          <section className="grid gap-4 md:grid-cols-2">
+            <h3 className="font-semibold md:col-span-2">🎯 Qui il prospecte</h3>
+            <fieldset>
+              <legend className="mb-1 font-medium">Zones actives</legend>
+              {[1, 2, 3].map((z) => (
+                <label key={z} className="mr-4 inline-flex items-center gap-1"><input type="checkbox" name={`zone_${z}`} defaultChecked={c.zones_actives.includes(z)} /> {ZONES[z]}</label>
+              ))}
+              <p className="text-xs text-muted">Il passe tout seul à la zone suivante quand la zone en cours est épuisée.</p>
+            </fieldset>
+            <label className="flex flex-col gap-1">Seuil de score pour écrire (0 à 100)
+              <input className="input w-28" type="number" min={0} max={100} name="seuil_score" defaultValue={c.seuil_score} />
+              <span className="text-xs text-muted">En dessous, il n&apos;écrit pas : plus haut = moins de messages mais mieux ciblés.</span>
+            </label>
+            <label className="flex flex-col gap-1">Part de ta liste vs annuaire de l&apos;État (%)
+              <input className="input w-28" type="number" min={0} max={100} name="part_liste_pct" defaultValue={c.part_liste_pct ?? 70} />
+            </label>
+            <label className="flex flex-col gap-1">Entreprises vérifiées par passage (5 à 25)
+              <input className="input w-28" type="number" min={5} max={25} name="lot_verification" defaultValue={c.lot_verification ?? 15} />
+              <span className="text-xs text-muted">4 passages par jour ouvré. Plus haut = plus vite, mais plus de recherches et un passage plus long (5 min max).</span>
+            </label>
+          </section>
+
+          <section className="grid gap-4 md:grid-cols-2">
+            <h3 className="font-semibold md:col-span-2">📨 Rythme et relances</h3>
+            <label className="flex flex-col gap-1">Messages par jour au maximum (1 à 60)
+              <input className="input w-28" type="number" min={1} max={60} name="limite_max_jour" defaultValue={c.limite_max_jour ?? 40} />
+              <span className="text-xs text-muted">En réel : 10/jour la 1re semaine, 20 la 2e, puis le rythme calculé, sans dépasser ce plafond.</span>
+            </label>
+            <label className="flex flex-col gap-1">Messages préparés d&apos;avance (jours de stock)
+              <input className="input w-28" type="number" min={1} max={7} name="stock_jours" defaultValue={c.stock_jours ?? 3} />
+            </label>
+            <label className="flex flex-col gap-1">E-mail : 1re relance après (jours ouvrés)
+              <input className="input w-28" type="number" min={1} max={30} name="relance1_jours" defaultValue={c.relance1_jours ?? 4} />
+            </label>
+            <label className="flex flex-col gap-1">E-mail : 2e et dernière relance après (jours ouvrés)
+              <input className="input w-28" type="number" min={1} max={30} name="relance2_jours" defaultValue={c.relance2_jours ?? 6} />
+            </label>
+            <label className="flex flex-col gap-1">SMS : une seule relance après (jours ouvrés)
+              <input className="input w-28" type="number" min={1} max={30} name="relance_sms_jours" defaultValue={c.relance_sms_jours ?? 5} />
+              <span className="text-xs text-muted">5 = une semaine. Après cette relance, il n&apos;écrit plus et passe à l&apos;entreprise suivante.</span>
+            </label>
+            <label className="flex flex-col gap-1">Sans réponse : réessayer après (mois, 0 = jamais)
+              <input className="input w-28" type="number" min={0} max={24} name="recontact_mois" defaultValue={c.recontact_mois ?? 6} />
+              <span className="text-xs text-muted">Avec une autre offre. 0 = il ne revient jamais vers elle.</span>
+            </label>
+            <fieldset>
+              <legend className="mb-1 font-medium">Jours d&apos;envoi</legend>
+              {["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"].map((j, i) => (
+                <label key={j} className="mr-3 inline-flex items-center gap-1"><input type="checkbox" name={`jour_${i + 1}`} defaultChecked={c.horaires.jours.includes(i + 1)} /> {j}</label>
+              ))}
+              <p className="text-xs text-muted">Jamais les jours fériés.</p>
+            </fieldset>
+            <label className="flex flex-col gap-1">Horaires (matin / après-midi)
+              <span className="flex flex-wrap gap-2">
+                <input className="input w-24" name="m1" defaultValue={c.horaires.plages[0]?.[0]} /> <input className="input w-24" name="m2" defaultValue={c.horaires.plages[0]?.[1]} />
+                <input className="input w-24" name="a1" defaultValue={c.horaires.plages[1]?.[0]} /> <input className="input w-24" name="a2" defaultValue={c.horaires.plages[1]?.[1]} />
+              </span>
+            </label>
+            <label className="inline-flex items-center gap-2 md:col-span-2"><input type="checkbox" name="envoi_auto" defaultChecked={c.envoi_auto} />
+              Envoi automatique (sans ta validation) — désactivé par défaut, déconseillé les premières semaines</label>
+          </section>
+
+          <section className="grid gap-4 md:grid-cols-2">
+            <h3 className="font-semibold md:col-span-2">✉️ Envoi et SMS</h3>
+            <label className="flex flex-col gap-1">Nom affiché de l&apos;expéditeur
+              <input className="input" name="nom_expediteur" defaultValue={c.nom_expediteur ?? "Rudy — SolveLab"} maxLength={80} />
+            </label>
+            <label className="flex flex-col gap-1">Adresse d&apos;envoi (domaine secondaire, jamais @solvelab.fr)
+              <input className="input" name="email_expediteur" defaultValue={c.email_expediteur ?? ""} placeholder="rudy@solvelab-studio.fr" />
+            </label>
+            <label className="flex flex-col gap-1">Adresse qui reçoit les alertes et le rapport
+              <input className="input" name="alert_email" defaultValue={c.alert_email ?? ""} placeholder="ton adresse personnelle" />
+            </label>
+            <label className="flex flex-col gap-1">Mention STOP des SMS
+              <select className="input" name="sms_stop" defaultValue={c.sms_stop ?? "lien"}>
+                <option value="lien">Mon lien de désinscription (2 SMS facturés par message)</option>
+                <option value="brevo">« STOP au 36… » ajouté par Brevo (1 seul SMS facturé)</option>
+              </select>
+              <span className="text-xs text-muted">Choisis Brevo seulement après avoir vu « STOP au 36… » à la fin de ton SMS de test.</span>
+            </label>
+          </section>
+
+          <section className="grid gap-4 md:grid-cols-2">
+            <h3 className="font-semibold md:col-span-2">⛽ Quota n8n</h3>
+            <label className="flex flex-col gap-1">Ralentir à (% du quota du mois)
+              <input className="input w-28" type="number" min={50} max={90} name="quota_cible_pct" defaultValue={c.quota_cible_pct ?? 80} />
+            </label>
+            <label className="flex flex-col gap-1">Mettre les envois en pause à (%)
+              <input className="input w-28" type="number" min={80} max={99} name="quota_pause_pct" defaultValue={c.quota_pause_pct ?? 95} />
+            </label>
+          </section>
+
+          <div><button className="btn-primary px-5 py-3 text-base">💾 Enregistrer les réglages</button></div>
         </form>
 
         <form action={async (fd) => { "use server"; await demandeRgpd(fd); }} className="mt-6 border-t border-border pt-4 text-sm">

@@ -29,6 +29,16 @@ export async function ecarterMessage(id: string) {
   fini();
 }
 
+/** Suppression directe : messages non envoyés, fiche CRM créée par l'agent ; l'agent ne la recontactera jamais. */
+export async function supprimerEntreprise(entrepriseId: string) {
+  const supabase = await db();
+  const { data, error } = await supabase.rpc("agent_supprimer", { p_entreprise: entrepriseId });
+  fini();
+  revalidatePath("/prospects");
+  if (error) return { ok: false, erreur: error.message };
+  return data as { ok: boolean };
+}
+
 export async function toutValider() {
   const supabase = await db();
   await supabase.rpc("agent_tout_valider");
@@ -81,6 +91,12 @@ export async function enregistrerReglages(fd: FormData) {
   const seuil = Math.min(100, Math.max(0, Number(fd.get("seuil_score") ?? 60) || 60));
   const email = (k: string) => { const v = String(fd.get(k) ?? "").trim().toLowerCase(); return /^[^@\s]+@[^@\s]+\.[a-z]{2,}$/.test(v) ? v : null; };
   const envoiAuto = fd.get("envoi_auto") === "on";
+  const entier = (k: string, d: number, min: number, max: number) => {
+    const n = Math.round(Number(fd.get(k)));
+    return Number.isFinite(n) && String(fd.get(k) ?? "").trim() !== "" ? Math.min(max, Math.max(min, n)) : d;
+  };
+  const texte = (k: string, max: number) => String(fd.get(k) ?? "").replace(/\r/g, "").trim().slice(0, max);
+  const presentation = texte("presentation", 3000);
   await supabase.from("config_agent").update({
     zones_actives: zones.length ? zones : [1],
     horaires: { jours: jours.length ? jours : [1, 2, 3, 4, 5], plages: [[plage("m1", "09:00"), plage("m2", "12:00")], [plage("a1", "14:00"), plage("a2", "17:30")]] },
@@ -90,6 +106,19 @@ export async function enregistrerReglages(fd: FormData) {
     email_expediteur: email("email_expediteur"),
     alert_email: email("alert_email"),
     sms_stop: fd.get("sms_stop") === "brevo" ? "brevo" : "lien",
+    ...(presentation ? { presentation } : {}),
+    consignes: texte("consignes", 3000),
+    nom_expediteur: texte("nom_expediteur", 80) || "Rudy — SolveLab",
+    limite_max_jour: entier("limite_max_jour", 40, 1, 60),
+    lot_verification: entier("lot_verification", 15, 5, 25),
+    stock_jours: entier("stock_jours", 3, 1, 7),
+    part_liste_pct: entier("part_liste_pct", 70, 0, 100),
+    relance1_jours: entier("relance1_jours", 4, 1, 30),
+    relance2_jours: entier("relance2_jours", 6, 1, 30),
+    relance_sms_jours: entier("relance_sms_jours", 5, 1, 30),
+    recontact_mois: entier("recontact_mois", 6, 0, 24),
+    quota_cible_pct: entier("quota_cible_pct", 80, 50, 90),
+    quota_pause_pct: entier("quota_pause_pct", 95, 80, 99),
   }).eq("id", 1);
   fini();
 }

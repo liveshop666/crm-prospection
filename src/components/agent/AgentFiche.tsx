@@ -1,4 +1,5 @@
 import { FilDirect } from "@/components/agent/FilDirect";
+import { BoutonSupprimer } from "@/components/agent/Pilotage";
 import { type AgentEvent, BESOINS, OFFRES, STATUTS_AGENT } from "@/lib/agent";
 import { createClient } from "@/lib/supabase/server";
 
@@ -14,7 +15,10 @@ export async function AgentFiche({ prospectId }: { prospectId: string }) {
   ]);
   return (
     <section className="card mt-6 p-4">
-      <h2 className="mb-3 font-semibold">🤖 Ce que l&apos;agent a fait</h2>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h2 className="font-semibold">🤖 Ce que l&apos;agent a fait</h2>
+        {e.statut !== "exclu" && <BoutonSupprimer id={e.id} nom={e.nom} libelle="🗑️ Supprimer" />}
+      </div>
       <div className="mb-3 grid gap-2 text-sm md:grid-cols-4">
         <div><div className="text-xs text-muted">Statut agent</div>{STATUTS_AGENT[e.statut] ?? e.statut}</div>
         <div><div className="text-xs text-muted">Besoin principal</div>{BESOINS[e.besoin_principal ?? ""] ?? "—"}</div>

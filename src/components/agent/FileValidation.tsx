@@ -1,10 +1,10 @@
 "use client";
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { ecarterMessage, toutValider, validerMessage } from "@/app/actions-agent";
+import { supprimerEntreprise, toutValider, validerMessage } from "@/app/actions-agent";
 import { type AgentMessage, BESOINS, OFFRES } from "@/lib/agent";
 
-/** File des messages prêts : Valider, Modifier, Écarter, et « Tout valider ». */
+/** File des messages prêts : Valider, Modifier, Supprimer, et « Tout valider ». */
 export function FileValidation({ messages }: { messages: AgentMessage[] }) {
   const [pending, start] = useTransition();
   const aValider = messages.filter((m) => m.statut === "a_valider").length;
@@ -85,10 +85,12 @@ function Carte({ m }: { m: AgentMessage }) {
           )}
           {!valide && !edition && <button className="btn-ghost" onClick={() => setEdition(true)}>Modifier</button>}
           {edition && <button className="btn-ghost" onClick={() => { setEdition(false); setTexte(m.texte_valide ?? m.texte_propose); }}>Annuler</button>}
-          <button className="btn-ghost" disabled={pending}
-            onClick={() => { if (confirm("Écarter ce message ? L'agent n'écrira pas à cette entreprise.")) start(() => ecarterMessage(m.id)); }}>
-            Écarter
-          </button>
+          {e?.id && (
+            <button className="btn-ghost text-rose-600 dark:text-rose-300" disabled={pending}
+              onClick={() => { if (confirm(`Supprimer ${e.nom} ? Le message et sa fiche disparaissent, l'agent ne lui écrira jamais et passe à l'entreprise suivante.`)) start(async () => { await supprimerEntreprise(e.id); }); }}>
+              🗑️ Supprimer
+            </button>
+          )}
         </div>
       </div>
     </li>

@@ -62,7 +62,10 @@ export interface Tableau {
     envoi_auto: boolean; validation_obligatoire: boolean; horaires: { jours: number[]; plages: [string, string][] };
     email_expediteur: string | null; alert_email: string | null; lien_desinscription: string | null; quota_mensuel: number;
     test_demande: { entreprise_id: string } | null;
-    sms_stop?: "lien" | "brevo";
+    sms_stop?: "lien" | "brevo"; presentation?: string; consignes?: string; nom_expediteur?: string;
+    limite_max_jour?: number; lot_verification?: number; stock_jours?: number; part_liste_pct?: number;
+    relance1_jours?: number; relance2_jours?: number; relance_sms_jours?: number; recontact_mois?: number;
+    quota_cible_pct?: number; quota_pause_pct?: number;
   };
   indicateurs: { part_sans_site: number | null; taux_desinscription: number | null };
 }

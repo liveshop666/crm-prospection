@@ -1,6 +1,6 @@
 "use client";
 import { useState, useTransition } from "react";
-import { marquerFait, mettreEnPause, passerEnReel, passerEnSimulation, testerUneEntreprise } from "@/app/actions-agent";
+import { marquerFait, mettreEnPause, passerEnReel, passerEnSimulation, supprimerEntreprise, testerUneEntreprise } from "@/app/actions-agent";
 
 export function BoutonPause({ pause }: { pause: boolean }) {
   const [pending, start] = useTransition();
@@ -47,4 +47,15 @@ export function BoutonTester() {
 export function BoutonFait({ id }: { id: string }) {
   const [pending, start] = useTransition();
   return <button className="btn-ghost px-2 py-1 text-xs" disabled={pending} onClick={() => start(() => marquerFait(id))}>Fait ✓</button>;
+}
+
+/** Petit bouton 🗑️ : supprime l'entreprise de partout (l'agent ne la recontactera jamais). */
+export function BoutonSupprimer({ id, nom, libelle = "🗑️" }: { id: string; nom: string; libelle?: string }) {
+  const [pending, start] = useTransition();
+  return (
+    <button className="btn-ghost px-2 py-1 text-xs text-rose-600 dark:text-rose-300" disabled={pending} title={`Supprimer ${nom}`}
+      onClick={() => { if (confirm(`Supprimer ${nom} ? L'agent ne lui écrira jamais et passe à l'entreprise suivante.`)) start(async () => { await supprimerEntreprise(id); }); }}>
+      {libelle}
+    </button>
+  );
 }
