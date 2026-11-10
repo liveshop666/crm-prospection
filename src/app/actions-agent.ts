@@ -117,6 +117,8 @@ export async function enregistrerReglages(fd: FormData) {
     relance2_jours: entier("relance2_jours", 6, 1, 30),
     relance_sms_jours: entier("relance_sms_jours", 5, 1, 30),
     recontact_mois: entier("recontact_mois", 6, 0, 24),
+    sms_max_jour: entier("sms_max_jour", 10, 0, 40),
+    sms_max_mois: entier("sms_max_mois", 150, 0, 2000),
     quota_cible_pct: entier("quota_cible_pct", 80, 50, 90),
     quota_pause_pct: entier("quota_pause_pct", 95, 80, 99),
   }).eq("id", 1);

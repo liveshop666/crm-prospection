@@ -65,7 +65,7 @@ export interface Tableau {
     sms_stop?: "lien" | "brevo"; presentation?: string; consignes?: string; nom_expediteur?: string;
     limite_max_jour?: number; lot_verification?: number; stock_jours?: number; part_liste_pct?: number;
     relance1_jours?: number; relance2_jours?: number; relance_sms_jours?: number; recontact_mois?: number;
-    quota_cible_pct?: number; quota_pause_pct?: number;
+    quota_cible_pct?: number; quota_pause_pct?: number; sms_max_jour?: number; sms_max_mois?: number;
   };
   indicateurs: { part_sans_site: number | null; taux_desinscription: number | null };
 }

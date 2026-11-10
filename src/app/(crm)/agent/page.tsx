@@ -296,6 +296,13 @@ export default async function AgentPage() {
               </select>
               <span className="text-xs text-muted">Choisis Brevo seulement après avoir vu « STOP au 36… » à la fin de ton SMS de test.</span>
             </label>
+            <label className="flex flex-col gap-1">SMS par jour au maximum (0 = aucun SMS)
+              <input className="input w-28" type="number" min={0} max={40} name="sms_max_jour" defaultValue={c.sms_max_jour ?? 10} />
+            </label>
+            <label className="flex flex-col gap-1">SMS par mois au maximum (ton budget Brevo)
+              <input className="input w-28" type="number" min={0} max={2000} name="sms_max_mois" defaultValue={c.sms_max_mois ?? 150} />
+              <span className="text-xs text-muted">Une fois atteint, plus aucun SMS ce mois-ci ; les e-mails continuent.</span>
+            </label>
           </section>
 
           <section className="grid gap-4 md:grid-cols-2">
